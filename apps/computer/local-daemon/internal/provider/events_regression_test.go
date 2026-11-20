@@ -276,3 +276,32 @@ func TestEventProjectionReportsModelRequestsAndToolResultTimes(t *testing.T) {
 		t.Fatalf("tool result = %v", returned)
 	}
 }
+
+func TestEventProjectionClipsOversizedToolNamesAndDetails(t *testing.T) {
+	projection := eventProjection{operationID: "operation"}
+	longTitle := "Run " + strings.Repeat("a", 240)
+	started := projection.project(native.Event{Kind: native.EventToolCall, InvocationID: "call-1", ToolName: longTitle, ActivityKind: native.ActivityCommand})
+	if len(started) != 2 {
+		t.Fatalf("events = %v, want tool.called and activity.started", started)
+	}
+	calledName, _ := started[0].(map[string]any)["tool_name"].(string)
+	activityTitle, _ := started[1].(map[string]any)["title"].(string)
+	if calledName == "" || utf8.RuneCountInString(calledName) > 200 || calledName != activityTitle {
+		t.Fatalf("clipped tool_name/title = %q / %q", calledName, activityTitle)
+	}
+	progress := projection.project(native.Event{Kind: native.EventToolProgress, InvocationID: "call-1", Body: strings.Repeat("b", 240)})
+	if len(progress) != 1 {
+		t.Fatalf("progress = %v, want 1 event", progress)
+	}
+	if detail, _ := progress[0].(map[string]any)["detail"].(string); detail == "" || utf8.RuneCountInString(detail) > 200 {
+		t.Fatalf("clipped detail = %q", detail)
+	}
+	returned := projection.project(native.Event{Kind: native.EventToolOutput, InvocationID: "call-1", Status: "completed"})
+	if returnedName, _ := returned[0].(map[string]any)["tool_name"].(string); returnedName != calledName {
+		t.Fatalf("returned tool_name = %q, want %q", returnedName, calledName)
+	}
+	blank := normalizeMessage(native.Event{Kind: native.EventToolCall, InvocationID: "call-2", ToolName: "   "}, "operation").(map[string]any)
+	if blank["tool_name"] != "provider_tool" {
+		t.Fatalf("blank tool_name = %v, want provider_tool", blank["tool_name"])
+	}
+}
