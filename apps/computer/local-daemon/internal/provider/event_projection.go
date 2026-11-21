@@ -82,7 +82,11 @@ func (projection *eventProjection) projectActivity(message native.Event) []any {
 		if _, active := projection.tools[message.InvocationID]; !active || projection.quiet[message.InvocationID] {
 			return nil
 		}
-		return []any{map[string]any{"type": "activity.updated", "activity_id": stableEventID("activity", projection.operationID+"\x00"+message.InvocationID), "detail": message.Body}}
+		detail := clip(strings.TrimSpace(strings.ToValidUTF8(message.Body, "\ufffd")), 200)
+		if detail == "" {
+			return nil
+		}
+		return []any{map[string]any{"type": "activity.updated", "activity_id": stableEventID("activity", projection.operationID+"\x00"+message.InvocationID), "detail": detail}}
 	}
 	if message.Kind == native.EventLog || message.Kind == native.EventError {
 		return nil
