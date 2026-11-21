@@ -53,12 +53,13 @@ type ToolProvider interface {
 }
 
 type Service struct {
-	canvasSource CanvasSourceReader
-	pool         *pgxpool.Pool
-	contexts     *agentauth.Service
-	connections  connectionAuthority
-	provider     ToolProvider
-	logger       *slog.Logger
+	canvasSource               CanvasSourceReader
+	pool                       *pgxpool.Pool
+	contexts                   *agentauth.Service
+	connections                connectionAuthority
+	provider                   ToolProvider
+	logger                     *slog.Logger
+	autoApproveEmailRecipients map[string]struct{}
 	// pinnedTools keeps fetched tool versions for pinnedToolTTL; every call
 	// otherwise waits on the same Composio lookup before it runs.
 	pinnedTools sync.Map
@@ -298,8 +299,13 @@ func (s *Service) execute(ctx context.Context, input ExecuteInput, authorize fun
 	if err != nil {
 		return Result{}, err
 	}
+	autoApproved := false
 	defer func() {
-		s.logCall(ctx, "tools/execute", connection, input.ToolSlug, input.ToolVersion, resultOutcome(result, err), issueCodes(err)...)
+		extra := issueCodes(err)
+		if autoApproved {
+			extra = append(extra, "auto_approved", true)
+		}
+		s.logCall(ctx, "tools/execute", connection, input.ToolSlug, input.ToolVersion, resultOutcome(result, err), extra...)
 	}()
 	if err := s.checkConnectionActive(ctx, connection); err != nil {
 		return Result{}, err
@@ -317,10 +323,23 @@ func (s *Service) execute(ctx context.Context, input ExecuteInput, authorize fun
 			access = accessConfirm
 		}
 	}
+	var canvas canvasSend
 	if access == accessConfirm {
-		return s.prepareConfirmation(ctx, connection, confirmationAction{
+		action := confirmationAction{
 			ToolSlug: input.ToolSlug, ToolVersion: input.ToolVersion, Arguments: input.Arguments,
-		})
+		}
+		canvas, err = s.checkedCanvasSource(ctx, connection, action)
+		if err != nil {
+			return Result{}, err
+		}
+		var preloadedDraft map[string]any
+		autoApproved, preloadedDraft, err = s.emailSendAutoApproved(ctx, connection, action)
+		if err != nil {
+			return Result{}, err
+		}
+		if !autoApproved {
+			return s.prepareConfirmation(ctx, connection, action, canvas, preloadedDraft)
+		}
 	}
 	// Revalidate Agent authority immediately before admission, including the exact connection
 	// revision that was checked upstream. No network call holds database locks.
@@ -339,6 +358,9 @@ func (s *Service) execute(ctx context.Context, input ExecuteInput, authorize fun
 		input.ToolSlug, input.ToolVersion, input.Arguments,
 	)
 	if err != nil {
+		if status, _, _ := failedOrUnknown(err); status == "unknown" {
+			s.recordCanvasSend(ctx, connection, canvas, "unknown", "The Agent's send was not confirmed. Check Sent in Gmail before sending again.")
+		}
 		return Result{}, dispatchedError(err)
 	}
 	if !execution.Successful {
@@ -351,6 +373,7 @@ func (s *Service) execute(ctx context.Context, input ExecuteInput, authorize fun
 		}
 		return Result{}, uncertain
 	}
+	s.recordCanvasSend(ctx, connection, canvas, "sent", "")
 	return Result{Data: sanitizeValue(execution.Data)}, nil
 }
 

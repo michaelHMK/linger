@@ -24,6 +24,14 @@ Go service owning Human HTTP/SSE, Agent callbacks, and active product state.
 - Connector authorization defaults to the public Web callback. For a desktop
   request, pass only a validated one-time loopback address to Composio.
   TeamHub verifies connection status independently under the signed-in Account.
+- `TEAMHUB_AUTO_APPROVE_EMAIL_RECIPIENTS` (empty by default) lists bare email
+  addresses whose outgoing Outlook and Gmail calls (`OUTLOOK_SEND_EMAIL`,
+  `OUTLOOK_SEND_DRAFT`, `GMAIL_SEND_EMAIL`, `GMAIL_SEND_DRAFT`,
+  `GMAIL_REPLY_TO_THREAD`) run without a confirmation card when every resolved
+  recipient (`To`, `Cc`, and `Bcc`) is in the allowlist. Draft sends inspect the
+  stored draft recipients first and reuse that read if a card is still needed;
+  any missing, unexpected, or unparseable recipient fails closed to
+  confirmation, and Gmail canvas source checks and send recording still apply.
 - `internal/<feature>`: business behavior, transactions and data access with
   package tests: `collaboration` (Human Rooms and Messages),
   `agentregistry` (Agents, templates, Skill bindings, Another Me),

@@ -102,12 +102,16 @@ func describeConfirmation(connection externalsource.AgentToolConnection, action 
 }
 
 // readDraft reads the draft a send-draft call sends, in the shape the card shows.
-func (s *Service) readDraft(ctx context.Context, connection externalsource.AgentToolConnection, action confirmationAction) (*typedcard.ConnectorWriteMessage, error) {
+func (s *Service) readDraft(ctx context.Context, connection externalsource.AgentToolConnection, action confirmationAction, preloaded map[string]any) (*typedcard.ConnectorWriteMessage, error) {
 	read := draftReadTool[action.ToolSlug]
 	if action.ToolSlug == "GMAIL_SEND_DRAFT" {
-		data, err := s.readTool(ctx, connection, read, action.ToolVersion, map[string]any{"draft_id": str(action.Arguments, "draft_id"), "format": "full"})
-		if err != nil {
-			return nil, err
+		data := preloaded
+		if data == nil {
+			var err error
+			data, err = s.readTool(ctx, connection, read, action.ToolVersion, map[string]any{"draft_id": str(action.Arguments, "draft_id"), "format": "full"})
+			if err != nil {
+				return nil, err
+			}
 		}
 		message, ok := data["message"].(map[string]any)
 		if !ok {
@@ -116,9 +120,13 @@ func (s *Service) readDraft(ctx context.Context, connection externalsource.Agent
 		return gmailDraftMessage(message)
 	}
 	id := str(action.Arguments, "message_id")
-	data, err := s.readTool(ctx, connection, read, action.ToolVersion, map[string]any{"message_id": id})
-	if err != nil {
-		return nil, err
+	data := preloaded
+	if data == nil {
+		var err error
+		data, err = s.readTool(ctx, connection, read, action.ToolVersion, map[string]any{"message_id": id})
+		if err != nil {
+			return nil, err
+		}
 	}
 	message := outlookDraftMessage(data)
 	attachments, err := s.readTool(ctx, connection, "OUTLOOK_LIST_OUTLOOK_ATTACHMENTS", action.ToolVersion,

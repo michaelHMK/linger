@@ -57,6 +57,7 @@ func (a *App) registerExternalApps(ctx context.Context, cfg config.ExternalAppsC
 	a.externalSources = sources
 	a.agentConnectedApps = agentconnectedapps.New(a.pool, agentAuthorization, sources, client)
 	a.agentConnectedApps.SetLogger(a.logger)
+	a.agentConnectedApps.SetAutoApproveEmailRecipients(cfg.AutoApproveEmailRecipients)
 	return nil
 }
 
