@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/mail"
 	"net/netip"
 	"net/url"
 	"os"
@@ -110,6 +111,10 @@ type ExternalAppsConfig struct {
 	SecretEncryptionKey         string // base64 32-byte key; encrypts the Composio API key saved in the product
 	MaxRetryAfter               time.Duration
 	AppImportProviderCallBudget int
+	// AutoApproveEmailRecipients lists lowercased bare email addresses whose
+	// outgoing Outlook and Gmail sends skip sponsor confirmation when every
+	// recipient (To, Cc, and Bcc) is in the list.
+	AutoApproveEmailRecipients []string
 }
 
 // PermissionReviewConfig configures the Runtime tool permission judge.
@@ -158,6 +163,9 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	if err := applyVoiceMedia(&cfg); err != nil {
+		return Config{}, err
+	}
+	if err := applyAutoApproveEmailRecipients(&cfg); err != nil {
 		return Config{}, err
 	}
 	if err := applyDerivedCredentials(&cfg); err != nil {
@@ -392,6 +400,13 @@ func validate(cfg *Config) error {
 			return errors.New("TEAMHUB_SECRET_ENCRYPTION_KEY must be 32 bytes in standard base64")
 		}
 	}
+	if len(cfg.ExternalApps.AutoApproveEmailRecipients) > 0 {
+		normalized, err := normalizeEmailAllowlist(cfg.ExternalApps.AutoApproveEmailRecipients)
+		if err != nil {
+			return err
+		}
+		cfg.ExternalApps.AutoApproveEmailRecipients = normalized
+	}
 	if cfg.LocalIdentityKey != "" {
 		if _, err := localidentity.DecodeKey(cfg.LocalIdentityKey); err != nil {
 			return err
@@ -482,6 +497,47 @@ func applyVoiceMedia(cfg *Config) error {
 		return errors.New("TEAMHUB_VOICE_MEDIA must be on or off")
 	}
 	return nil
+}
+
+// applyAutoApproveEmailRecipients reads TEAMHUB_AUTO_APPROVE_EMAIL_RECIPIENTS;
+// unset or empty keeps confirmation required for every outgoing email.
+func applyAutoApproveEmailRecipients(cfg *Config) error {
+	value := strings.TrimSpace(os.Getenv("TEAMHUB_AUTO_APPROVE_EMAIL_RECIPIENTS"))
+	if value == "" {
+		return nil
+	}
+	normalized, err := normalizeEmailAllowlist(strings.Split(value, ","))
+	if err != nil {
+		return err
+	}
+	cfg.ExternalApps.AutoApproveEmailRecipients = normalized
+	return nil
+}
+
+func normalizeEmailAllowlist(entries []string) ([]string, error) {
+	recipients := make([]string, 0, len(entries))
+	seen := make(map[string]struct{}, len(entries))
+	for _, entry := range entries {
+		trimmed := strings.TrimSpace(entry)
+		if trimmed == "" || strings.ContainsAny(trimmed, " \t\r\n\x00<>\"(),;:\\[]") {
+			return nil, errors.New("TEAMHUB_AUTO_APPROVE_EMAIL_RECIPIENTS must contain comma-separated bare email addresses")
+		}
+		parsed, err := mail.ParseAddress(trimmed)
+		if err != nil || parsed.Name != "" || parsed.Address != trimmed {
+			return nil, errors.New("TEAMHUB_AUTO_APPROVE_EMAIL_RECIPIENTS must contain comma-separated bare email addresses")
+		}
+		local, domain, ok := strings.Cut(parsed.Address, "@")
+		if !ok || local == "" || domain == "" {
+			return nil, errors.New("TEAMHUB_AUTO_APPROVE_EMAIL_RECIPIENTS must contain comma-separated bare email addresses")
+		}
+		canonical := strings.ToLower(parsed.Address)
+		if _, dup := seen[canonical]; dup {
+			continue
+		}
+		seen[canonical] = struct{}{}
+		recipients = append(recipients, canonical)
+	}
+	return recipients, nil
 }
 
 func setNonemptyEnvironment(target *string, name string) {

@@ -43,11 +43,7 @@ type confirmationAction struct {
 
 // prepareConfirmation builds the stored call and its card from what will run
 // for an authorized call on an active connection.
-func (s *Service) prepareConfirmation(ctx context.Context, connection externalsource.AgentToolConnection, action confirmationAction) (Result, error) {
-	canvas, err := s.checkedCanvasSource(ctx, connection, action)
-	if err != nil {
-		return Result{}, err
-	}
+func (s *Service) prepareConfirmation(ctx context.Context, connection externalsource.AgentToolConnection, action confirmationAction, canvas canvasSend, preloadedDraft map[string]any) (Result, error) {
 	action.CanvasSourceDigest = canvas.digest
 	card := describeConfirmation(connection, action)
 	// A tool without its own card layout shows only its arguments, so they
@@ -57,7 +53,7 @@ func (s *Service) prepareConfirmation(ctx context.Context, connection externalso
 			Issues: []Issue{{Path: "arguments", Code: "too_large_to_confirm", Message: "The arguments must fit on the sponsor's confirmation card"}}}
 	}
 	if read := draftReadTool[action.ToolSlug]; read != "" {
-		message, err := s.readDraft(ctx, connection, action)
+		message, err := s.readDraft(ctx, connection, action, preloadedDraft)
 		if err != nil {
 			return Result{}, err
 		}
@@ -111,7 +107,7 @@ func (s *Service) ExecuteConfirmed(ctx context.Context, decisionID, tenantID, ag
 		return "failed", "TeamHub could not reach the connected app, so the call was not run.", nil
 	}
 	if action.DraftDigest != "" {
-		message, err := s.readDraft(ctx, connection, action)
+		message, err := s.readDraft(ctx, connection, action, nil)
 		if err != nil {
 			return "failed", "TeamHub could not read the draft to check it, so it was not sent.", nil
 		}

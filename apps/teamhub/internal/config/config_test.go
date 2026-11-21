@@ -22,6 +22,7 @@ var teamhubEnvironment = []string{
 	"COMPOSIO_API_KEY",
 	"TEAMHUB_LOCAL_IDENTITY_KEY",
 	"TEAMHUB_COMPOSIO_ENVIRONMENT_KEY",
+	"TEAMHUB_AUTO_APPROVE_EMAIL_RECIPIENTS",
 	"WEB_PUBLIC_ORIGIN",
 	"SONIOX_API_KEY",
 	"XAI_API_KEY",
@@ -427,6 +428,43 @@ func TestPermissionReviewConfiguration(t *testing.T) {
 	t.Setenv("TEAMHUB_PERMISSION_REVIEW", "false")
 	if cfg, err = Load(); err != nil || cfg.PermissionReview.Enabled {
 		t.Fatalf("false must keep the review off: enabled=%v err=%v", cfg.PermissionReview.Enabled, err)
+	}
+}
+
+func TestAutoApproveEmailRecipientsConfiguration(t *testing.T) {
+	clearTeamHubEnvironment(t)
+	t.Setenv("TEAMHUB_DATABASE_URL", "postgres://environment.example/teamhub")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.ExternalApps.AutoApproveEmailRecipients) != 0 {
+		t.Fatalf("allowlist must default to empty: %v", cfg.ExternalApps.AutoApproveEmailRecipients)
+	}
+
+	t.Setenv("TEAMHUB_AUTO_APPROVE_EMAIL_RECIPIENTS", " Alice@Example.COM , bob+brief@example.org , alice@example.com ")
+	cfg, err = Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"alice@example.com", "bob+brief@example.org"}
+	if !reflect.DeepEqual(cfg.ExternalApps.AutoApproveEmailRecipients, want) {
+		t.Fatalf("allowlist=%v want=%v", cfg.ExternalApps.AutoApproveEmailRecipients, want)
+	}
+
+	for _, invalid := range []string{
+		"not-an-email",
+		"Alice <alice@example.com>",
+		"alice@example.com,",
+		",alice@example.com",
+		"alice@example.com,,bob@example.com",
+		"alice@example.com;bob@example.com",
+		"alice @example.com",
+	} {
+		t.Setenv("TEAMHUB_AUTO_APPROVE_EMAIL_RECIPIENTS", invalid)
+		if _, err := Load(); err == nil || !strings.Contains(err.Error(), "TEAMHUB_AUTO_APPROVE_EMAIL_RECIPIENTS") {
+			t.Fatalf("invalid allowlist %q accepted: %v", invalid, err)
+		}
 	}
 }
 
