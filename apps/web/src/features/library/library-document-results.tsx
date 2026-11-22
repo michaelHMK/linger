@@ -21,6 +21,7 @@ import { useT, useTranslation } from "@/i18n/use-translation";
 import { formatDateTime, formatUpdatedAt } from "@/lib/date-format";
 
 import { documentFileName } from "./document-display-name";
+import { documentSourceLabels } from "./document-source-label";
 import { type LibraryFolder, LibraryFolderRow } from "./library-folder-browser";
 import type { LibrarySection } from "./library-sidebar";
 import type { PendingDocumentUpload } from "./library-upload-queue";
@@ -127,10 +128,12 @@ function documentContext(
   if (!document.from) return "";
   if (document.from.length)
     return t(m.visibleIn, {
-      // Room, Task and page names, listed as they are.
-      places: document.from
-        .map((source) => source.label ?? source.binding_kind)
-        .join(", "),
+      // Room and Task names, listed as they are, and the Personal Wiki.
+      places: documentSourceLabels(
+        document.from,
+        t,
+        (source) => source.binding_kind,
+      ).join(", "),
     });
   return showUnlinked ? t(m.noLinkedContext) : "";
 }

@@ -63,6 +63,7 @@ import { relativeTime } from "./computer-relative-time";
 import { ComputerRow, ProgressChip, RowMark, StatusDot } from "./computer-row";
 import { computersMessages } from "./computers.messages";
 import { isUpgradeRecommended } from "./computer-version";
+import { localRuntimeMessage } from "./local-runtime-message";
 
 type LocalComputer = TeamHubLocalComputerPage["items"][number];
 interface AppSetup {
@@ -731,8 +732,9 @@ function runtimeMessage(
   app: TeamHubLocalRuntimeType,
   t: Translate,
 ) {
+  const runtime = computer.runtimes.find((item) => item.type === app);
   return (
-    computer.runtimes.find((item) => item.type === app)?.message ??
+    (runtime && localRuntimeMessage(runtime, app, computer.display_name, t)) ??
     t(computersMessages.couldNotCheckApp, { app: appNames[app] })
   );
 }

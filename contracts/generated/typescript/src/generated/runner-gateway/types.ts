@@ -137,6 +137,7 @@ export type OperationPrepare = OperationIdentity & {
   session_options: SessionOptions;
   session: OpaqueObject;
   permission_review?: true;
+  stop_hook?: true;
   /**
    * @maxItems 64
    */
@@ -1006,6 +1007,7 @@ export interface ProviderPrepare {
 export interface ProviderPrepareRunContext {
   human_interactions?: boolean;
   permission_review?: boolean;
+  stop_hook?: boolean;
 }
 /**
  * Compacts the native session of the process parked for this Context with the Runtime's own compaction. It never starts a process; without a parked process the answer is no_process.
@@ -1085,6 +1087,10 @@ export interface ContextRunContext {
    * The Daemon sends Runtime permission prompts as human_interaction.requested with kind permission_review; Agent Service answers each with an operation.input runtime_response.
    */
   permission_review?: boolean;
+  /**
+   * The Daemon sends Runtime stop-hook checks as human_interaction.requested with kind runtime_hook (hook: stop); Agent Service answers each with an operation.input runtime_response.
+   */
+  stop_hook?: boolean;
   /**
    * Continue the exact native session of this Run after a confirmed scheduler cancellation.
    */

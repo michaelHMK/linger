@@ -41,6 +41,8 @@ type OperationSpec struct {
 	// PermissionReview sends the Runtime's own permission prompts to the
 	// Runtime permission review (Agent Service declares it per Run).
 	PermissionReview bool
+	// StopHook asks Agent Service before a Runtime finishes a turn.
+	StopHook bool
 	// TeamHubCLIBin is the bundled TeamHub CLI directory; its command manifest
 	// names the TeamHub commands that run without review.
 	TeamHubCLIBin        string
@@ -429,11 +431,11 @@ func (e Executor) Start(ctx context.Context, spec OperationSpec, emit EmitFunc) 
 			if native.CodexSupportsDirectTools(spec.CodexVersion) {
 				mcpConfig, capabilityErr = codexDirectLocalTools(mcpConfig, spec.TrustedLocalMCPTools)
 			}
-			// A prepare binds the thread its reviewed Run reuses, so it carries the
-			// same hook as that Run; the binding fingerprint covers the hook. The
+			// A prepare binds the thread its Run reuses, so it carries the same
+			// managed hooks as that Run; the binding fingerprint covers them. The
 			// Run's MCP servers are attached when it adopts the process.
-			if capabilityErr == nil && authorization.ReviewsPermissions() && native.CodexSupportsPermissionHook(spec.CodexVersion) {
-				codexHook, mcpConfig, capabilityErr = prepareCodexPermissionReview(runtimeHome.Path, teamhubCommands, mcpConfig)
+			if capabilityErr == nil && (authorization.ReviewsPermissions() || authorization.UsesStopHook()) && native.CodexSupportsPermissionHook(spec.CodexVersion) {
+				codexHook, mcpConfig, capabilityErr = prepareCodexHooks(runtimeHome.Path, teamhubCommands, mcpConfig, authorization.ReviewsPermissions(), authorization.UsesStopHook())
 			}
 
 		case "claude":
@@ -516,7 +518,7 @@ func (e Executor) Start(ctx context.Context, spec OperationSpec, emit EmitFunc) 
 			resultCh <- result
 		}
 		var bridge *native.HumanInteractionBridge
-		if (spec.HumanInteractions || spec.PermissionReview) && spec.OperationKind == "run.start" {
+		if (spec.HumanInteractions || spec.PermissionReview || spec.StopHook) && spec.OperationKind == "run.start" {
 			bridge = native.NewHumanInteractionBridge(func(message native.Event) {
 				payload, err := json.Marshal(map[string]any{"type": "human_interaction.requested", "request": message.Input})
 				if err == nil {
@@ -531,8 +533,9 @@ func (e Executor) Start(ctx context.Context, spec OperationSpec, emit EmitFunc) 
 			execution.mu.Unlock()
 			defer bridge.Close()
 		}
-		// The bridge carries both Room questions and permission reviews, but
-		// only a Context with Room questions posts Codex's native questions.
+		// The bridge carries Room questions, permission reviews, and runtime
+		// hooks, but only a Context with Room questions posts Codex's native
+		// questions.
 		var questions *native.HumanInteractionBridge
 		if spec.HumanInteractions {
 			questions = bridge
@@ -542,6 +545,10 @@ func (e Executor) Start(ctx context.Context, spec OperationSpec, emit EmitFunc) 
 			reviewer = &permission.Reviewer{Requester: bridge, TeamHubCommands: teamhubCommands, ScriptScope: permission.ScriptScope(spec.AgentID, spec.ScopeID), LocalEvidence: spec.LocalEvidence, LocalAllowed: spec.LocalAllowed, Environment: permission.Environment{
 				RuntimeVersion: spec.CodexVersion, Platform: runtime.GOOS, Workspace: spec.WorkingDirectory,
 			}}
+		}
+		var stopHook native.StopHookFunc
+		if spec.UsesStopHook() {
+			stopHook = native.NewBridgeStopHook(bridge, spec.Provider, logger)
 		}
 		if spec.RegisterToolReviewer != nil {
 			release, err := spec.RegisterToolReviewer(reviewer)
@@ -558,6 +565,7 @@ func (e Executor) Start(ctx context.Context, spec OperationSpec, emit EmitFunc) 
 		runSpec := native.RunSpec{
 			HumanInteraction:      questions,
 			PermissionReviewer:    reviewer,
+			StopHook:              stopHook,
 			CodexPermissionHook:   codexHook,
 			ShellTextHook:         e.ShellTextHook,
 			RuntimeHome:           runtimeHomePath,
@@ -833,27 +841,34 @@ func codexDirectLocalTools(mcpConfig json.RawMessage, localTools []string) (json
 	return json.Marshal(parsed)
 }
 
-// prepareCodexPermissionReview readies a Context's CODEX_HOME for a reviewed
-// Run: the execpolicy rules that allow read-only and TeamHub commands, managed
-// MCP tools that always ask, and the PermissionRequest hook that reaches this
-// Daemon. Without the hook a reviewed Run cannot start.
-func prepareCodexPermissionReview(codexHome string, teamhubCommands []permission.TeamHubCommand, mcpConfig json.RawMessage) (*permission.CodexHook, json.RawMessage, error) {
-	if err := permission.CodexWriteRules(codexHome, permission.CodexRules(teamhubCommands)); err != nil {
-		return nil, nil, fmt.Errorf("write Codex permission rules: %w", err)
-	}
-	mcpConfig, err := permission.CodexPromptMCPTools(mcpConfig)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Codex MCP configuration is invalid: %w", err)
+// prepareCodexHooks readies a Context's CODEX_HOME for managed Codex hooks:
+// when review is enabled, execpolicy rules and MCP prompt overrides; for either
+// review or stop hooks, the loopback Daemon hook endpoint and config.
+func prepareCodexHooks(codexHome string, teamhubCommands []permission.TeamHubCommand, mcpConfig json.RawMessage, review, stop bool) (*permission.CodexHook, json.RawMessage, error) {
+	if review {
+		if err := permission.CodexWriteRules(codexHome, permission.CodexRules(teamhubCommands)); err != nil {
+			return nil, nil, fmt.Errorf("write Codex permission rules: %w", err)
+		}
+		var err error
+		mcpConfig, err = permission.CodexPromptMCPTools(mcpConfig)
+		if err != nil {
+			return nil, nil, fmt.Errorf("Codex MCP configuration is invalid: %w", err)
+		}
 	}
 	endpoint, err := permission.CodexSharedEndpoint()
 	if err != nil {
-		return nil, nil, fmt.Errorf("start Codex permission hook endpoint: %w", err)
+		return nil, nil, fmt.Errorf("start Codex hook endpoint: %w", err)
 	}
 	executable, err := os.Executable()
 	if err != nil {
-		return nil, nil, fmt.Errorf("locate the Daemon for the Codex permission hook: %w", err)
+		return nil, nil, fmt.Errorf("locate the Daemon for the Codex hook: %w", err)
 	}
-	return &permission.CodexHook{Endpoint: endpoint, Config: endpoint.HooksConfig(executable)}, mcpConfig, nil
+	return &permission.CodexHook{
+		Endpoint:          endpoint,
+		Config:            endpoint.HooksConfigFor(executable, review, stop),
+		ReviewPermissions: review,
+		StopHook:          stop,
+	}, mcpConfig, nil
 }
 
 // ReviewsPermissions reports whether this Operation answers the Runtime's own
@@ -874,6 +889,12 @@ func freshSession(spec OperationSpec) func() {
 			spec.SessionMoved()
 		}
 	}
+}
+
+// UsesStopHook reports whether this Operation asks Agent Service before a
+// Runtime finishes its turn.
+func (spec OperationSpec) UsesStopHook() bool {
+	return spec.StopHook && spec.OperationKind == "run.start"
 }
 
 // startsFreshSession reports whether a Run whose retained native session the

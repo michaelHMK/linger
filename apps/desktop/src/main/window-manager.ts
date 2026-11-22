@@ -14,8 +14,12 @@ import {
 } from "electron";
 
 import iconPng from "../../resources/icon.png";
+import { localizePage } from "../i18n/page.js";
+import messagesHtml from "../shell/messages.html";
 import offlineHtml from "../shell/offline.html";
+import { offlineMessages } from "../shell/offline.messages.js";
 import titlebarHtml from "../shell/titlebar.html";
+import { titlebarMessages } from "../shell/titlebar.messages.js";
 import {
   SHELL_IPC,
   type ShellCommand,
@@ -26,6 +30,7 @@ import { IPC } from "../shared/api.js";
 import type { DiagnosticsModule } from "./diagnostics.js";
 import { diagnosticsDialogs } from "./diagnostics-dialogs.js";
 import { sendWithPrompts } from "./diagnostics-upload.js";
+import type { LanguageModule } from "./language.js";
 import type { Module, ModuleContext } from "./modules.js";
 import {
   OFFLINE_ORIGIN,
@@ -93,8 +98,8 @@ const chrome = (platform: NodeJS.Platform): BaseWindowConstructorOptions => {
   return { frame: false };
 };
 
-export const INVALID_SERVER =
-  "Enter a server address that starts with http:// or https://";
+// The offline page's code for an address it shows its own message for.
+const INVALID_SERVER = "invalid-server";
 
 const html = (body: string): Response =>
   new Response(body, {
@@ -141,7 +146,7 @@ const extractAssetPaths = (documentHtml: string): string[] => {
 // Closing hides the window; the tray keeps the app running.
 export class WindowManagerModule implements Module {
   readonly name = "WindowManager";
-  readonly dependsOn = ["Config"];
+  readonly dependsOn = ["Config", "Language"];
   readonly #options: WindowManagerOptions;
   #ctx: ModuleContext | undefined;
   #window: BaseWindow | undefined;
@@ -181,6 +186,10 @@ export class WindowManagerModule implements Module {
     this.#unsubscribe.push(
       () => ipcMain.removeHandler(SHELL_IPC.state),
       () => ipcMain.removeAllListeners(SHELL_IPC.command),
+      // The title bar's button labels are filled in when it loads.
+      ctx.bus.on("language.changed", () =>
+        this.#titlebar?.webContents.reload(),
+      ),
     );
     if (!this.#options.background) this.show();
   }
@@ -813,7 +822,7 @@ export class WindowManagerModule implements Module {
   #serveApp(request: Request): Response {
     const url = new URL(request.url);
     if (url.host === "shell" && url.pathname === "/titlebar")
-      return html(titlebarHtml);
+      return html(this.#localize(titlebarHtml, titlebarMessages));
     if (url.host !== "offline") return new Response(null, { status: 404 });
     if (url.pathname === "/logo.png")
       return new Response(Buffer.from(iconPng), {
@@ -834,7 +843,7 @@ export class WindowManagerModule implements Module {
     if (url.pathname === "/send") {
       void sendWithPrompts(
         this.#ctx!.get<DiagnosticsModule>("Diagnostics").sender,
-        diagnosticsDialogs(() => this.#window),
+        diagnosticsDialogs(() => this.#window, this.#language().t),
       );
       return new Response(null, { status: 204 });
     }
@@ -855,6 +864,19 @@ export class WindowManagerModule implements Module {
         this.#loadOffline(INVALID_SERVER);
       return new Response(null, { status: 204 });
     }
-    return html(offlineHtml);
+    return html(this.#localize(offlineHtml, offlineMessages));
+  }
+
+  #language(): LanguageModule {
+    return this.#ctx!.get<LanguageModule>("Language");
+  }
+
+  #localize(page: string, messages: Parameters<typeof localizePage>[2]) {
+    return localizePage(
+      page,
+      messagesHtml,
+      messages,
+      this.#language().current(),
+    );
   }
 }

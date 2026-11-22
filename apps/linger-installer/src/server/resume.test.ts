@@ -150,24 +150,76 @@ test("reports a BYOK gateway that did not come back on a ready resume", async ()
   ).toMatchObject({ code: 0, state: "ready", details: { byokGateway } });
 });
 
-test("reports a local model restore that failed", async () => {
+test("reports a local model restore that failed without blocking resume", async () => {
   const failed = {
     code: 4,
     state: "action_required" as const,
     message: "The local model stack is not ready.",
-    details: { code: "LOCAL_MODELS_RECOVERY_REQUIRED" },
+    details: {
+      code: "LOCAL_MODELS_RECOVERY_REQUIRED",
+      reasons: ["binding-unavailable"],
+    },
   };
+  const logs: string[] = [];
   const restoreByok = vi.fn(async () => undefined);
   expect(
-    await resumeSourceInstance(options, {
-      load: async () => instance,
-      engines: native(vi.fn(), true),
-      pending: async () => false,
-      restore: async () => failed,
-      restoreByok,
-    }),
-  ).toEqual(failed);
+    await resumeSourceInstance(
+      { ...options, log: (message) => logs.push(message) },
+      {
+        load: async () => instance,
+        engines: native(vi.fn(), true),
+        pending: async () => false,
+        restore: async () => failed,
+        restoreByok,
+      },
+    ),
+  ).toMatchObject({
+    code: 0,
+    state: "ready",
+    details: {
+      origin: "http://localhost:3000",
+      source: "/source",
+      localModelsDegraded: {
+        code: "LOCAL_MODELS_RECOVERY_REQUIRED",
+        message: "The local model stack is not ready.",
+        reasons: ["binding-unavailable"],
+      },
+    },
+  });
   expect(restoreByok).not.toHaveBeenCalled();
+  expect(logs.join("")).toContain("LOCAL_MODELS_RECOVERY_REQUIRED");
+});
+
+test("reports a local model restore that throws without blocking resume", async () => {
+  const logs: string[] = [];
+  const restoreByok = vi.fn(async () => undefined);
+  expect(
+    await resumeSourceInstance(
+      { ...options, log: (message) => logs.push(message) },
+      {
+        load: async () => instance,
+        engines: native(vi.fn(), true),
+        pending: async () => false,
+        restore: async () => {
+          throw new Error("Invalid upstream local model binding.");
+        },
+        restoreByok,
+      },
+    ),
+  ).toMatchObject({
+    code: 0,
+    state: "ready",
+    details: {
+      origin: "http://localhost:3000",
+      source: "/source",
+      localModelsDegraded: {
+        code: "LOCAL_MODELS_RECOVERY_REQUIRED",
+        message: "Invalid upstream local model binding.",
+      },
+    },
+  });
+  expect(restoreByok).not.toHaveBeenCalled();
+  expect(logs.join("")).toContain("Invalid upstream local model binding.");
 });
 
 test("leaves the local models to a full start", async () => {

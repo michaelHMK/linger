@@ -73,9 +73,13 @@ take precedence.
   scheduler, execution store, or Runtime executor beside it, and do not
   restore TeamHub Run admission.
 - A Room Agent speaks only through TeamHub message writes, which the Computer
-  classifies as `message` activities (`reply-delivery.ts`). Before failing a
-  Room Run for a missing reply, the Run loop checks TeamHub's persisted reply
-  status (`GET /v0/agent-runtime/runs/reply-status`) so compound scripts,
+  classifies as `message` activities (`reply-delivery.ts`). Before a Room Run
+  ends, the `room-reply-guard` feature (`onRunBeforeStop`) checks TeamHub's
+  persisted reply status (`GET /v0/agent-runtime/runs/reply-status`) and blocks
+  the Runtime's Stop hook at most once so the model can still send a visible
+  reply in the same turn. Before failing a Room Run for a missing reply (when a
+  Stop hook blocked once or when an older Daemon/Runtime never ran Stop hooks),
+  the Run loop re-checks TeamHub's persisted reply status so compound scripts,
   decision cards, presentation sequences, and reactions that activity
   classification missed are not misreported. A Room Run whose every write
   failed finishes failed with `reply_undelivered`. One that left no reply while
@@ -146,6 +150,11 @@ take precedence.
   BYOK input goes only to Computer 0.56.0 or later
   (`FIRST_BYOK_ENDPOINT_COMPUTER_VERSION`), whose welcome also names the
   `byok_endpoint` service feature.
+- Runtime stop-hook bridging (`stop_hook` on `provider.prepare`,
+  `operation.prepare`, and `operation.start`) goes only to Computer 0.57.0 or
+  later (`FIRST_STOP_HOOK_COMPUTER_VERSION`), because an older Computer rejects
+  unknown envelope fields and closes the connection; Runs on older Computers
+  rely on `RunLoop`'s post-hoc `reply_not_sent` check.
 - Default unit, integration, and fixture smoke tests use deterministic adapters
   and do not call a live model provider. Explicitly named live suites such as
   `smoke:local-runner:live` may use an authenticated provider and must remain

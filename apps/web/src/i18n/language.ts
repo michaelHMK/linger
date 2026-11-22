@@ -93,7 +93,8 @@ export function formatLocale(language: Language = translation.language) {
   return language === "en" ? "en-US" : language;
 }
 
-function storedLanguage(): Language | undefined {
+/** The language the person chose on this device; undefined before any choice. */
+export function storedLanguage(): Language | undefined {
   try {
     const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
     return isLanguage(stored) ? stored : undefined;

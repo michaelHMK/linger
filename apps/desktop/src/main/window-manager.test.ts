@@ -126,13 +126,22 @@ vi.mock("electron", () => ({
 vi.mock("../../resources/icon.png", () => ({
   default: new Uint8Array([1, 2]),
 }));
-vi.mock("../shell/offline.html", () => ({ default: "<html>offline</html>" }));
-vi.mock("../shell/titlebar.html", () => ({ default: "<html>title</html>" }));
+vi.mock("../shell/offline.html", () => ({
+  default: '<html lang="en"><script>/* offline */</script></html>',
+}));
+vi.mock("../shell/titlebar.html", () => ({
+  default: '<html lang="en"><script>/* titlebar */</script></html>',
+}));
+vi.mock("../shell/messages.html", () => ({
+  default: "<script>/* messages */</script>",
+}));
 
-import { session } from "electron";
+import { protocol, session } from "electron";
 
 import { IPC } from "../shared/api.js";
 import { ConfigStore } from "./config.js";
+import zhCN from "../i18n/locales/zh-CN.json" with { type: "json" };
+import { LanguageModule } from "./language.js";
 import { EventBus, ModuleHost, type Module } from "./modules.js";
 import { tempDirectory } from "./test-support.js";
 import { WindowManagerModule } from "./window-manager.js";
@@ -164,6 +173,7 @@ function setup(
     stop: async () => {},
   };
   Object.assign(diagnosticsStub, { uploadUrl: () => undefined });
+  const language = new LanguageModule({ systemLanguages: () => ["en-US"] });
   const manager = new WindowManagerModule({
     preload: "/preload.cjs",
     shellPreload: "/shell.cjs",
@@ -181,6 +191,7 @@ function setup(
         stop: async () => {},
       },
       diagnosticsStub,
+      language,
       manager,
     ],
     {
@@ -193,7 +204,7 @@ function setup(
       },
     },
   );
-  return { manager, host, config, bus, logs };
+  return { manager, host, config, bus, logs, language };
 }
 
 function contentView() {
@@ -539,5 +550,32 @@ describe("WindowManagerModule", () => {
     expect(respond({ resourceType: "mainFrame" })).toEqual({});
     expect(content.send).toHaveBeenCalledTimes(1);
     await host.stop("quit");
+  });
+
+  it("serves the shell pages in the shell's language and redraws the title bar on a change", async () => {
+    const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
+    // Only Windows and Linux draw the title bar.
+    Object.defineProperty(process, "platform", { value: "linux" });
+    try {
+      const { host, language } = setup({ serverUrl: "http://localhost:3000" });
+      await host.start();
+      const serve = vi.mocked(protocol.handle).mock.calls.at(-1)![1];
+      const page = async (url: string) =>
+        (await serve(new Request(url) as never)).text();
+      expect(await page("app://shell/titlebar")).toContain('lang="en"');
+
+      const titlebar = state.views[0]!.webContents;
+      language.choose("zh-CN");
+      expect(titlebar.reload).toHaveBeenCalledOnce();
+      const titlebarPage = await page("app://shell/titlebar");
+      expect(titlebarPage).toContain('<html lang="zh-CN"');
+      expect(titlebarPage).toContain(zhCN.titlebar.close);
+      expect(await page("app://offline/")).toContain(
+        zhCN.offline.unreachableTitle,
+      );
+      await host.stop("quit");
+    } finally {
+      Object.defineProperty(process, "platform", platform);
+    }
   });
 });

@@ -2,6 +2,7 @@
 // The setup window walks a new install through server, sign-in, connecting
 // this computer and the system permissions it needs.
 
+import { INKLING_2_MINI_ANNOUNCEMENT_URL } from "@linger/service-kit/featured-models";
 import type {
   SetupChoice,
   SetupMemory,
@@ -23,6 +24,9 @@ export interface SetupLocalServer {
   readonly available: boolean;
   readonly phase: "idle" | "preparing" | "installing" | "ready" | "failed";
   readonly message: string;
+  // While preparing: a restart on a new version or a plain start; the page
+  // words it in its own language.
+  readonly preparing?: "updating" | "starting";
   // While installing: the steps shown, the current one and the overall share
   // done (0-1).
   readonly steps: readonly SetupLocalStep[];
@@ -144,7 +148,12 @@ export interface SetupRuntimeSignIn {
   readonly url?: string;
   readonly deviceCode?: string;
   readonly acceptsCode?: boolean;
+  // Why it failed, worded by the page: unavailable, timed_out or ended.
+  // message is the installer's English, for anything else.
+  readonly reason?: "unavailable" | "timed_out" | "ended";
   readonly message?: string;
+  // No browser opened on url; the page offers it to copy.
+  readonly browserFailed?: boolean;
 }
 
 export interface SetupTransfer {
@@ -193,6 +202,7 @@ export type SetupLocalModelsCheck =
         readonly downloadBytes: number | null;
         readonly diskBytes: number | null;
         readonly memoryBytes: number | null;
+        readonly featuredInkling?: true;
       };
       // The localmodels tool's code for why not, or, when eligible, for
       // what could still stop the install, with the counts it carries. The
@@ -264,8 +274,17 @@ export interface SetupState {
   >;
 }
 
+// Exact HTTPS URLs that the sandboxed setup page may ask the main process to
+// open in the system browser. Any other URL is rejected at the IPC boundary.
+export const SETUP_EXTERNAL_URLS = [INKLING_2_MINI_ANNOUNCEMENT_URL] as const;
+
+export type SetupExternalUrl = (typeof SETUP_EXTERNAL_URLS)[number];
+
+export { INKLING_2_MINI_ANNOUNCEMENT_URL };
+
 export type SetupCommand =
   | { readonly op: "server.set"; readonly serverUrl: string }
+  | { readonly op: "external.open"; readonly url: SetupExternalUrl }
   | {
       readonly op: "local.start";
       readonly runtime?: SetupLocalRuntime;
@@ -288,10 +307,16 @@ export type SetupCommand =
   | { readonly op: "local.location.pick" }
   | { readonly op: "local.location.reset" }
   // The runtime sign-in step: start the runtime's login (or give it the
-  // code its page showed), open its page again, check again, or install
-  // another runtime instead.
-  | { readonly op: "local.signin.start"; readonly code?: string }
+  // code its page showed; device starts Codex's device-code login), open
+  // its page again, copy its link or code, check again, or install another
+  // runtime instead.
+  | {
+      readonly op: "local.signin.start";
+      readonly code?: string;
+      readonly device?: true;
+    }
   | { readonly op: "local.signin.open" }
+  | { readonly op: "local.signin.copy"; readonly what: "url" | "code" }
   | { readonly op: "local.signin.cancel" }
   | {
       readonly op: "local.signin.switch";
@@ -329,6 +354,7 @@ export type SetupCommand =
     };
 
 export interface LingerSetupApi {
+  readonly featuredAnnouncementUrl: SetupExternalUrl;
   getState(): Promise<SetupState>;
   onState(callback: (state: SetupState) => void): () => void;
   run(command: SetupCommand): Promise<SetupState>;

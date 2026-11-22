@@ -19,9 +19,21 @@ import { teamHubData } from "@/features/teamhub/teamhub-api";
 import { type TeamHubClient } from "@/features/teamhub/teamhub-client";
 import { DocumentLinkSharing } from "./document-link-sharing";
 import type { TeamHubDocumentShareViewV2 } from "@/features/teamhub/teamhub-types";
+import { libraryMessages } from "@/features/library/library.messages";
+import { commonMessages } from "@/i18n/common.messages";
+import { translate, type Translate } from "@/i18n/language";
+import { useT } from "@/i18n/use-translation";
+
+import { documentShareMessages as m } from "./document-share.messages";
 
 const roles = ["viewer", "editor", "manager"] as const;
 type DirectRole = (typeof roles)[number];
+const roleMessages = {
+  editor: libraryMessages.roleEditor,
+  manager: libraryMessages.roleManager,
+  owner: libraryMessages.roleOwner,
+  viewer: libraryMessages.roleViewer,
+};
 
 export function DocumentShareDialog({
   client,
@@ -36,6 +48,7 @@ export function DocumentShareDialog({
   ownerActorId: string;
   tenantId: string;
 }) {
+  const t = useT();
   const [pendingSourceId, setPendingSourceId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [view, setView] = useState<"share" | "manage">("share");
@@ -91,7 +104,7 @@ export function DocumentShareDialog({
         ).toString(),
       );
     } catch {
-      setActionError("The Document link could not be copied.");
+      setActionError(translate(m.linkCopyFailed));
     }
   }
 
@@ -115,9 +128,7 @@ export function DocumentShareDialog({
       );
       await share.refetch();
     } catch {
-      setActionError(
-        "Some collaborators could not be invited. Refresh and try again.",
-      );
+      setActionError(translate(m.inviteFailed));
     } finally {
       setPendingSourceId(null);
     }
@@ -139,9 +150,7 @@ export function DocumentShareDialog({
       );
       await share.refetch();
     } catch {
-      setActionError(
-        "The Document could not be removed from this Room. Refresh and try again.",
-      );
+      setActionError(translate(m.removeFromRoomFailed));
       throw new Error("Remove from Room failed");
     } finally {
       setPendingSourceId(null);
@@ -168,7 +177,7 @@ export function DocumentShareDialog({
       );
       await share.refetch();
     } catch {
-      setActionError("The collaborator permission could not be updated.");
+      setActionError(translate(m.permissionUpdateFailed));
     } finally {
       setPendingSourceId(null);
     }
@@ -190,7 +199,7 @@ export function DocumentShareDialog({
       );
       await share.refetch();
     } catch {
-      setActionError("The collaborator could not be removed.");
+      setActionError(translate(m.removeCollaboratorFailed));
     } finally {
       setPendingSourceId(null);
     }
@@ -198,7 +207,7 @@ export function DocumentShareDialog({
 
   return (
     <ModalDialog
-      ariaLabel="Share Document"
+      ariaLabel={t(m.shareDocument)}
       className="flex flex-col overflow-hidden"
       closeOnBackdrop
       onClose={onClose}
@@ -210,7 +219,7 @@ export function DocumentShareDialog({
             <div className="flex items-center gap-1.5">
               {view === "manage" ? (
                 <Button
-                  aria-label="Back to share"
+                  aria-label={t(m.backToShare)}
                   onClick={() => setView("share")}
                   size="compactIcon"
                   tone="ghost"
@@ -219,12 +228,14 @@ export function DocumentShareDialog({
                 </Button>
               ) : null}
               <h2 className="text-base font-semibold text-app-ink">
-                {view === "manage" ? "Manage collaborators" : "Share"}
+                {view === "manage" ? t(m.manageCollaborators) : t(m.share)}
               </h2>
             </div>
             {share.data ? (
               <p className="mt-0.5 text-xs text-app-muted">
-                Your access: {roleLabel(share.data.caller_content_role)}
+                {t(m.yourAccess, {
+                  role: roleLabel(share.data.caller_content_role, t),
+                })}
               </p>
             ) : null}
           </div>
@@ -240,10 +251,10 @@ export function DocumentShareDialog({
             >
               <Icon icon={Alert02Icon} size={20} className="text-app-danger" />
               <p className="max-w-sm text-sm text-app-body">
-                Sharing settings are unavailable.
+                {t(m.settingsUnavailable)}
               </p>
               <Button onClick={() => void share.refetch()} tone="secondary">
-                <Icon icon={RefreshIcon} size={14} /> Retry
+                <Icon icon={RefreshIcon} size={14} /> {t(commonMessages.retry)}
               </Button>
             </div>
           ) : share.data ? (
@@ -324,6 +335,7 @@ function ShareContent({
   pendingSourceId: string | null;
   share: TeamHubDocumentShareViewV2;
 }) {
+  const t = useT();
   const direct = share.sources.filter((item) => sourceGroup(item) === "direct");
   const rooms = share.sources.filter(
     (item) =>
@@ -348,17 +360,17 @@ function ShareContent({
         >
           <span>{actionError}</span>
           <Button onClick={onRefresh} size="compact" tone="secondary">
-            Refresh
+            {t(m.refresh)}
           </Button>
         </div>
       ) : null}
       {pendingSourceId ? (
         <p
-          aria-label="Share change status"
+          aria-label={t(m.changeStatus)}
           className="text-sm text-app-muted"
           role="status"
         >
-          Saving access...
+          {t(m.savingAccess)}
         </p>
       ) : null}
       <section aria-labelledby="invite-collaborators-heading">
@@ -367,7 +379,7 @@ function ShareContent({
             className="text-base font-semibold text-app-ink"
             id="invite-collaborators-heading"
           >
-            Invite collaborators
+            {t(m.inviteCollaborators)}
           </h3>
           <CollaboratorAvatarButton
             actors={collaboratorActors}
@@ -405,9 +417,10 @@ function CollaboratorAvatarButton({
   count: number;
   onClick: () => void;
 }) {
+  const t = useT();
   return (
     <button
-      aria-label={`Manage ${count} active collaborators`}
+      aria-label={t(m.manageActiveCollaborators, { count })}
       className="flex min-h-9 items-center rounded-full px-1.5 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
       onClick={onClick}
       type="button"
@@ -430,7 +443,7 @@ function CollaboratorAvatarButton({
         ) : null}
       </span>
       <span className="ml-2 text-xs font-medium text-app-muted">
-        {count} active
+        {t(m.activeCount, { count })}
       </span>
     </button>
   );
@@ -457,6 +470,7 @@ function ManageCollaborators({
   pendingSourceId: string | null;
   share: TeamHubDocumentShareViewV2;
 }) {
+  const t = useT();
   const [removeTarget, setRemoveTarget] = useState<
     TeamHubDocumentShareViewV2["sources"][number] | null
   >(null);
@@ -488,7 +502,7 @@ function ManageCollaborators({
           className="text-sm font-medium text-app-muted"
           id="direct-collaborators-heading"
         >
-          Agents with direct access
+          {t(m.agentsWithDirectAccess)}
         </h3>
         {direct.length ? (
           <div className="mt-2 divide-y divide-app-border">
@@ -513,10 +527,10 @@ function ManageCollaborators({
                     <p className="truncate text-sm font-medium text-app-ink">
                       {actor?.display_name ?? item.label}
                     </p>
-                    <p className="text-xs text-app-muted">Agent</p>
+                    <p className="text-xs text-app-muted">{t(m.agent)}</p>
                   </div>
                   <Select
-                    aria-label={`${item.label} permission`}
+                    aria-label={t(m.permission, { label: item.label })}
                     className="w-auto"
                     disabled={disabled}
                     onValueChange={(role) => {
@@ -534,10 +548,10 @@ function ManageCollaborators({
                   >
                     {roles.map((role) => (
                       <SelectItem key={role} value={role}>
-                        {roleLabel(role)}
+                        {roleLabel(role, t)}
                       </SelectItem>
                     ))}
-                    <SelectItem value="remove">Remove access</SelectItem>
+                    <SelectItem value="remove">{t(m.removeAccess)}</SelectItem>
                   </Select>
                 </div>
               );
@@ -545,7 +559,7 @@ function ManageCollaborators({
           </div>
         ) : (
           <p className="mt-3 text-sm text-app-muted">
-            No direct collaborators yet.
+            {t(m.noDirectCollaborators)}
           </p>
         )}
       </section>
@@ -561,13 +575,14 @@ function ManageCollaborators({
           closeOnBackdrop
           onClose={() => setRemoveTarget(null)}
           size="sm"
-          title={`Remove ${removeTarget.label}?`}
+          title={t(m.removeTitle, { label: removeTarget.label })}
           footer={
             <>
               <Button onClick={() => setRemoveTarget(null)} tone="ghost">
-                Cancel
+                {t(commonMessages.cancel)}
               </Button>
               <Button
+                data-voice-risk="never"
                 disabled={disabled}
                 onClick={() => {
                   void onRemove(
@@ -577,14 +592,13 @@ function ManageCollaborators({
                 }}
                 tone="danger"
               >
-                Remove access
+                {t(m.removeAccess)}
               </Button>
             </>
           }
         >
           <p className="px-5 py-4 text-sm text-app-muted">
-            Their direct access will be removed. Access from a Room, Task, or
-            Wiki is not affected.
+            {t(m.removeAccessBody)}
           </p>
         </ModalDialog>
       ) : null}
@@ -601,6 +615,7 @@ function RoomBindingSection({
   onRemove: (roomId: string, version: number) => Promise<void>;
   rooms: TeamHubDocumentShareViewV2["sources"];
 }) {
+  const t = useT();
   const [selected, setSelected] = useState<
     TeamHubDocumentShareViewV2["sources"][number] | null
   >(null);
@@ -613,7 +628,7 @@ function RoomBindingSection({
         className="text-sm font-semibold text-app-ink"
         id="shared-rooms-heading"
       >
-        Shared with Rooms
+        {t(m.sharedWithRooms)}
       </h3>
       <div className="mt-2 divide-y divide-app-border">
         {rooms.map((room) => (
@@ -626,16 +641,17 @@ function RoomBindingSection({
                 {room.label}
               </span>
               <span className="block text-xs text-app-muted">
-                {roleLabel(room.source.role)}
+                {roleLabel(room.source.role, t)}
               </span>
             </div>
             <Button
+              data-voice-risk="never"
               disabled={disabled}
               onClick={() => setSelected(room)}
               size="compact"
               tone="ghost"
             >
-              Remove from Room
+              {t(m.removeFromRoom)}
             </Button>
           </div>
         ))}
@@ -645,13 +661,14 @@ function RoomBindingSection({
           closeOnBackdrop
           onClose={() => setSelected(null)}
           size="sm"
-          title={`Remove from ${selected.label}?`}
+          title={t(m.removeFromRoomTitle, { label: selected.label })}
           footer={
             <>
               <Button onClick={() => setSelected(null)} tone="ghost">
-                Cancel
+                {t(commonMessages.cancel)}
               </Button>
               <Button
+                data-voice-risk="never"
                 disabled={disabled}
                 onClick={() => {
                   void onRemove(
@@ -661,14 +678,13 @@ function RoomBindingSection({
                 }}
                 tone="danger"
               >
-                Remove
+                {t(commonMessages.remove)}
               </Button>
             </>
           }
         >
           <p className="px-5 py-4 text-sm text-app-muted">
-            Room members will lose this source. Direct, Task, and Wiki access
-            are not affected.
+            {t(m.removeFromRoomBody)}
           </p>
         </ModalDialog>
       ) : null}
@@ -677,17 +693,18 @@ function RoomBindingSection({
 }
 
 function CopyLinkSection({ onCopyLink }: { onCopyLink: () => void }) {
+  const t = useT();
   return (
     <section className="border-t border-app-border pt-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h3 className="text-sm font-semibold text-app-ink">Document link</h3>
-          <p className="mt-1 text-xs text-app-muted">
-            Copying the link does not change who can access this document.
-          </p>
+          <h3 className="text-sm font-semibold text-app-ink">
+            {t(m.documentLink)}
+          </h3>
+          <p className="mt-1 text-xs text-app-muted">{t(m.copyLinkHint)}</p>
         </div>
         <Button onClick={onCopyLink} tone="secondary">
-          <Icon icon={Copy01Icon} size={14} /> Copy link
+          <Icon icon={Copy01Icon} size={14} /> {t(libraryMessages.copyLink)}
         </Button>
       </div>
     </section>
@@ -713,6 +730,7 @@ function InviteCollaboratorsField({
   onInvite: (targetIds: string[], role: DirectRole) => Promise<void>;
   onRetry: () => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
@@ -725,15 +743,15 @@ function InviteCollaboratorsField({
     <div className="mt-3">
       <div className="flex items-center rounded-lg border border-input bg-card pr-1 transition-colors hover:border-border-hover focus-within:border-foreground focus-within:ring-2 focus-within:ring-ring">
         <input
-          aria-label="Search collaborators"
+          aria-label={t(m.searchCollaborators)}
           className="h-9 min-w-0 flex-1 bg-transparent px-3 text-sm text-app-ink outline-none placeholder:text-app-placeholder"
           onChange={(event) => setQuery(event.target.value)}
           onFocus={() => setOpen(true)}
-          placeholder="Search Agents"
+          placeholder={t(m.searchAgents)}
           value={query}
         />
         <Button
-          aria-label="Add collaborators"
+          aria-label={t(m.addCollaborators)}
           disabled={disabled}
           onClick={() => setOpen(true)}
           size="icon"
@@ -746,7 +764,7 @@ function InviteCollaboratorsField({
         <div className="mt-2 overflow-hidden rounded-md border border-app-border bg-popover shadow-md">
           {actorsPending ? (
             <p className="px-3 py-3 text-sm text-app-muted">
-              Loading collaborators...
+              {t(m.loadingCollaborators)}
             </p>
           ) : actorsError ? (
             <button
@@ -754,11 +772,11 @@ function InviteCollaboratorsField({
               onClick={onRetry}
               type="button"
             >
-              Unable to load. Retry
+              {t(m.unableToLoad)}
             </button>
           ) : filtered.length === 0 ? (
             <p className="px-3 py-3 text-sm text-app-muted">
-              No matching collaborators.
+              {t(m.noMatchingCollaborators)}
             </p>
           ) : (
             <div className="max-h-52 overflow-y-auto p-1">
@@ -782,7 +800,7 @@ function InviteCollaboratorsField({
                         {actor.display_name}
                       </span>
                       <span className="block text-xs text-app-muted">
-                        {actor.kind === "agent" ? "Agent" : "Person"}
+                        {actor.kind === "agent" ? t(m.agent) : t(m.person)}
                       </span>
                     </span>
                     <span
@@ -790,7 +808,7 @@ function InviteCollaboratorsField({
                         checked ? "font-medium text-app-ink" : "text-app-muted"
                       }
                     >
-                      {checked ? "Selected" : "Select"}
+                      {checked ? t(m.selected) : t(m.select)}
                     </span>
                   </button>
                 );
@@ -799,14 +817,14 @@ function InviteCollaboratorsField({
           )}
           <div className="flex items-center justify-between gap-2 border-t border-app-border px-3 py-2">
             <Select
-              aria-label="Invite role"
+              aria-label={t(m.inviteRole)}
               className="h-8 w-auto"
               onValueChange={(value) => setRole(value as DirectRole)}
               value={role}
             >
               {roles.map((option) => (
                 <SelectItem key={option} value={option}>
-                  {roleLabel(option)}
+                  {roleLabel(option, t)}
                 </SelectItem>
               ))}
             </Select>
@@ -819,9 +837,10 @@ function InviteCollaboratorsField({
                 size="compact"
                 tone="ghost"
               >
-                Cancel
+                {t(commonMessages.cancel)}
               </Button>
               <Button
+                data-voice-risk="confirm"
                 disabled={!selected.length || disabled}
                 onClick={() =>
                   void onInvite(selected, role).then(() => {
@@ -831,7 +850,9 @@ function InviteCollaboratorsField({
                 }
                 size="compact"
               >
-                Invite{selected.length ? ` (${selected.length})` : ""}
+                {selected.length
+                  ? t(m.inviteCount, { count: selected.length })
+                  : t(m.invite)}
               </Button>
             </div>
           </div>
@@ -842,9 +863,10 @@ function InviteCollaboratorsField({
 }
 
 function ShareLoading() {
+  const t = useT();
   return (
-    <div aria-label="Share loading" className="space-y-3" role="status">
-      <span className="sr-only">Loading access</span>
+    <div aria-label={t(m.shareLoading)} className="space-y-3" role="status">
+      <span className="sr-only">{t(m.loadingAccess)}</span>
       {[0, 1, 2].map((item) => (
         <div
           className="h-12 animate-pulse rounded-lg bg-muted motion-reduce:animate-none"
@@ -855,8 +877,10 @@ function ShareLoading() {
   );
 }
 
-function roleLabel(role: string) {
-  return role.charAt(0).toUpperCase() + role.slice(1);
+function roleLabel(role: string, t: Translate) {
+  return role in roleMessages
+    ? t(roleMessages[role as keyof typeof roleMessages])
+    : role.charAt(0).toUpperCase() + role.slice(1);
 }
 function sourceGroup(item: TeamHubDocumentShareViewV2["sources"][number]) {
   return item.source_group ?? item.source.source_kind;

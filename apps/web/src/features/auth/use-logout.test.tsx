@@ -138,6 +138,10 @@ describe("useLogout", () => {
       "global-search-recent.v2:tenant-northstar",
       JSON.stringify({ queries: ["private customer query"], opened: {} }),
     );
+    window.localStorage.setItem(
+      "linger.models.lastComputer:tenant-northstar",
+      "computer-mac",
+    );
     let finishOutbox!: () => void;
     const clearOutbox = vi
       .spyOn(browserRoomMessageOutbox, "clearAccount")
@@ -187,6 +191,11 @@ describe("useLogout", () => {
     await waitFor(() => expect(broadcast).toHaveBeenCalledOnce());
     expect(
       window.localStorage.getItem("global-search-recent.v2:tenant-northstar"),
+    ).toBeNull();
+    expect(
+      window.localStorage.getItem(
+        "linger.models.lastComputer:tenant-northstar",
+      ),
     ).toBeNull();
     expect(clearOutbox).toHaveBeenCalledWith(identity.account.id);
   });

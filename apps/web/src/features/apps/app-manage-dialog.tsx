@@ -23,6 +23,7 @@ import {
   externalConnectionQueryOptions,
   externalConnectionsQueryKey,
 } from "./connected-apps-queries";
+import { appDescription } from "./app-groups";
 import { ConnectAppStatus, useConnectAppFlow } from "./connect-app-flow";
 import {
   establishedExternalConnections,
@@ -66,7 +67,7 @@ export function AppManageDialog({
     <>
       <ModalDialog
         closeOnBackdrop
-        description={app.description}
+        description={appDescription(app, t)}
         onClose={onClose}
         size="md"
         title={app.display_name}

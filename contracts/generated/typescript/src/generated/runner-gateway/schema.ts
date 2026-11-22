@@ -3887,6 +3887,11 @@ export const runnerGatewayEnvelopeSchema = {
           description:
             "The Daemon sends Runtime permission prompts as human_interaction.requested with kind permission_review; Agent Service answers each with an operation.input runtime_response.",
         },
+        stop_hook: {
+          type: "boolean",
+          description:
+            "The Daemon sends Runtime stop-hook checks as human_interaction.requested with kind runtime_hook (hook: stop); Agent Service answers each with an operation.input runtime_response.",
+        },
         resume_after_yield: {
           type: "boolean",
           description:
@@ -4099,6 +4104,9 @@ export const runnerGatewayEnvelopeSchema = {
               $ref: "#/$defs/OpaqueObject",
             },
             permission_review: {
+              const: true,
+            },
+            stop_hook: {
               const: true,
             },
             mcp_relays: {
@@ -4511,6 +4519,9 @@ export const runnerGatewayEnvelopeSchema = {
           type: "boolean",
         },
         permission_review: {
+          type: "boolean",
+        },
+        stop_hook: {
           type: "boolean",
         },
       },

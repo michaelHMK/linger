@@ -11,6 +11,7 @@ import {
   documentRepresentationFormat,
 } from "@/features/library/document-display-name";
 import { documentFormatLabel } from "@/features/library/document-format-label";
+import { documentSourceLabels } from "@/features/library/document-source-label";
 import { documentDetailPath } from "@/features/rooms/files/document-detail-routes";
 import { markdownPlainText } from "@/features/teamhub/markdown-plain-text";
 import type {
@@ -185,12 +186,11 @@ function messageRoomLabel(
 
 function documentLocationLabel(document: TeamHubDocument) {
   if (document.from.length === 0) return translate(m.library);
-  return document.from
-    .map(
-      (binding) =>
-        binding.label ?? `${binding.binding_kind}:${binding.context_id}`,
-    )
-    .join(", ");
+  return documentSourceLabels(
+    document.from,
+    translate,
+    (binding) => `${binding.binding_kind}:${binding.context_id}`,
+  ).join(", ");
 }
 
 export function roomChatPath(tenantId: string, roomId: string) {

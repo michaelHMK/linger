@@ -128,8 +128,14 @@ if (args.includes("--inspect")) {
   fs.writeFileSync(path.join(home, "runtime", "inspect-args.json"), JSON.stringify(args));
   const hardware = { totalMemoryBytes: 64 * 1024 ** 3, diskFreeBytes: 200 * 1024 ** 3, gpus: [{ name: "RTX 4090" }] };
   const eligible = !fs.existsSync(path.join(target, "small-computer"));
+  const modelFile = path.join(target, "inspect-model");
+  const modelName = fs.existsSync(path.join(target, "unnamed-model"))
+    ? ""
+    : fs.existsSync(modelFile)
+      ? fs.readFileSync(modelFile, "utf8").trim()
+      : "qwen3-8b";
   const estimate = eligible
-    ? { model: fs.existsSync(path.join(target, "unnamed-model")) ? "" : "qwen3-8b", downloadBytes: 6 * 1024 ** 3, diskBytes: 8 * 1024 ** 3, memoryBytes: 12 * 1024 ** 3 }
+    ? { model: modelName, downloadBytes: 6 * 1024 ** 3, diskBytes: 8 * 1024 ** 3, memoryBytes: 12 * 1024 ** 3 }
     : { model: "", downloadBytes: null, diskBytes: null, memoryBytes: null };
   if (fs.existsSync(path.join(home, "tool-download"))) {
     // The first check downloads the localmodels tool, counted before the report.
@@ -807,29 +813,46 @@ describe("LocalServerModule", () => {
     expect(f.module.status().steps).toContain("signin");
     expect(f.enroll).not.toHaveBeenCalled();
 
-    // The runtime's own login runs in the installer; its page opens once.
+    // The runtime's own login runs in the installer. On Linux, Codex's
+    // browser login leaves its page to this app, which opens it once.
+    const oauth =
+      "https://auth.openai.com/oauth/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A1455%2Fauth%2Fcallback&state=x";
+    api.runtime.login = { state: "waiting_user", url: oauth };
+    await f.module.startSignIn();
+    expect(api.runtime.logins).toEqual([
+      { instance: LOCAL_INSTANCE, method: "browser" },
+    ]);
+    expect(f.module.status().signIn).toEqual({
+      runtime: "codex",
+      state: "waiting_user",
+      url: oauth,
+    });
+    await waitForInstaller(() => expect(openExternal).toHaveBeenCalledTimes(1));
+    expect(openExternal).toHaveBeenCalledWith(oauth);
+
+    // A code for another device instead; its page opens too.
     api.runtime.login = {
       state: "waiting_user",
       url: "https://auth.openai.com/codex/device",
       deviceCode: "ABCD-1234",
     };
-    await f.module.startSignIn();
-    expect(api.runtime.logins).toEqual([{ instance: LOCAL_INSTANCE }]);
+    await f.module.startSignIn(undefined, true);
     expect(f.module.status().signIn).toEqual({
       runtime: "codex",
       state: "waiting_user",
       url: "https://auth.openai.com/codex/device",
       deviceCode: "ABCD-1234",
     });
-    await waitForInstaller(() => expect(openExternal).toHaveBeenCalledTimes(1));
-    expect(openExternal).toHaveBeenCalledWith(
+    await waitForInstaller(() => expect(openExternal).toHaveBeenCalledTimes(2));
+    expect(openExternal).toHaveBeenLastCalledWith(
       "https://auth.openai.com/codex/device",
     );
 
     // Claude Code's page shows a code to paste back.
     await f.module.startSignIn("pasted-code");
     expect(api.runtime.logins).toEqual([
-      { instance: LOCAL_INSTANCE },
+      { instance: LOCAL_INSTANCE, method: "browser" },
+      { instance: LOCAL_INSTANCE, method: "device" },
       { instance: LOCAL_INSTANCE, code: "pasted-code" },
     ]);
 
@@ -841,7 +864,7 @@ describe("LocalServerModule", () => {
       signIn: { runtime: "codex", state: "signed_in" },
     });
     expect(f.module.status().steps).toContain("signin");
-    expect(openExternal).toHaveBeenCalledTimes(1);
+    expect(openExternal).toHaveBeenCalledTimes(2);
     expect(f.enroll).toHaveBeenCalled();
     expect(f.host.ctx.config.get().runtimeEnvironment).toEqual(
       api.runtime.environment,
@@ -925,6 +948,77 @@ describe("LocalServerModule", () => {
       signIn: { runtime: "claude", state: "signed_in" },
     });
     expect(openExternal).toHaveBeenCalledTimes(1);
+    await f.host.stop("quit");
+  });
+
+  it("says when no browser opens, and why a sign-in ended", async () => {
+    const api = installerApi([], {
+      state: "succeeded",
+      origin: "http://localhost:3000",
+      stages: [{ id: "runtime", state: "waiting_user" }],
+    });
+    api.runtime.setupChoice = "codex";
+    api.runtime.login = { state: "idle" };
+    const openExternal = vi.fn(async (_url: string): Promise<void> => {
+      throw new Error("xdg-open exited with 3");
+    });
+    const f = fixture(
+      (home) => ({ ...withCheckout(home), openExternal, signInPollMs: 5 }),
+      {},
+      checkout,
+      api,
+    );
+    await f.host.start();
+    const done = f.module.begin();
+    await waitForInstaller(() =>
+      expect(f.module.status().signIn?.state).toBe("required"),
+    );
+    const login = {
+      state: "waiting_user" as const,
+      url: "https://auth.openai.com/oauth/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A1455%2Fauth%2Fcallback&state=x",
+    };
+    api.runtime.login = login;
+    await f.module.startSignIn();
+    // No browser opened: the step says so, and the next checks keep it.
+    await waitForInstaller(() =>
+      expect(f.module.status().signIn).toEqual({
+        runtime: "codex",
+        ...login,
+        browserFailed: true,
+      }),
+    );
+    await delay(30);
+    expect(f.module.status().signIn?.browserFailed).toBe(true);
+    expect(openExternal).toHaveBeenCalledTimes(1);
+    // Opening it by hand works now.
+    openExternal.mockResolvedValueOnce(undefined);
+    await f.module.openSignInPage();
+    expect(f.module.status().signIn).toEqual({ runtime: "codex", ...login });
+
+    // The installer says why it ended; the step keeps the reason.
+    api.runtime.login = {
+      state: "failed",
+      reason: "timed_out",
+      message: "Sign-in timed out. Retry or sign in later.",
+    };
+    await waitForInstaller(() =>
+      expect(f.module.status().signIn).toEqual({
+        runtime: "codex",
+        state: "failed",
+        reason: "timed_out",
+        message: "Sign-in timed out. Retry or sign in later.",
+      }),
+    );
+    api.runtime.login = { state: "idle" };
+    await delay(30);
+    expect(f.module.status().signIn?.reason).toBe("timed_out");
+
+    api.runtime.login = { state: "ready" };
+    await done;
+    expect(f.module.status().signIn).toEqual({
+      runtime: "codex",
+      state: "signed_in",
+    });
     await f.host.stop("quit");
   });
 
@@ -1732,6 +1826,28 @@ describe("LocalServerModule", () => {
     info.mockRestore();
   });
 
+  it("marks checked Inkling 2 Mini models with featuredInkling using the shared matcher", async () => {
+    const f = fixture({ checkout: "/src" }, {}, (home) => {
+      mkdirSync(home, { recursive: true });
+      writeFileSync(
+        path.join(home, "inspect-model"),
+        "thinkingmachines/Inkling-2-Mini",
+      );
+    });
+    await f.host.start();
+    f.module.inspect();
+    await waitForInstaller(() =>
+      expect(f.module.status().localModels).toMatchObject({
+        state: "checked",
+        eligible: true,
+        model: {
+          name: "thinkingmachines/Inkling-2-Mini",
+          featuredInkling: true,
+        },
+      }),
+    );
+  });
+
   it("forwards validated CUDA driver versions without leaking tool prose", async () => {
     const info = vi.spyOn(silentLog, "info");
     const f = fixture({ checkout: "/src" }, {}, (home) => {
@@ -1859,6 +1975,27 @@ describe("LocalServerModule", () => {
     await f.module.begin({ runtime: "local" });
     expect(f.api.retried).toEqual([{ localModelsReplan: true }]);
     expect(f.module.status().phase).toBe("ready");
+    await f.host.stop("quit");
+  });
+
+  it("does not replan on binding-unavailable and reports the structured reason", async () => {
+    const f = fixture(
+      withCheckout,
+      {},
+      checkout,
+      installerApi([], {
+        state: "waiting_user",
+        errorCode: "LOCAL_MODELS_RECOVERY_REQUIRED",
+        errorReasons: ["binding-unavailable"],
+        message:
+          "The upstream tool could not verify the local stack binding: Restore the existing install and try again.",
+      }),
+    );
+    await f.host.start();
+    await expect(f.module.begin({ runtime: "local" })).rejects.toThrow(
+      "The local model stack couldn't be checked. This computer can't run the local model right now. Choose another AI runtime and try again.",
+    );
+    expect(f.api.retried).toEqual([]);
     await f.host.stop("quit");
   });
 

@@ -7,6 +7,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { useT } from "@/i18n/use-translation";
+
 import {
   closeVoicePip,
   onVoicePipClosedByHuman,
@@ -35,6 +37,7 @@ import {
   minimizeRecordingWindow,
   useRecordingWindow,
 } from "./recording-window-store";
+import { recordingMessages as m } from "./recording.messages";
 import {
   useOptionalVoiceControl,
   type VoiceControlContextValue,
@@ -67,6 +70,7 @@ const pageTop = 36;
  * tab button, keeps recording in the page window.
  */
 export default function RecordingWindow() {
+  const t = useT();
   const windowState = useRecordingWindow();
   const livekit = useOptionalVoiceControl();
   const voice = livekit;
@@ -253,7 +257,7 @@ export default function RecordingWindow() {
   const fill = Boolean(!pip && view && sized?.height);
   return createPortal(
     <div
-      aria-label="Recording window"
+      aria-label={t(m.window)}
       className={
         pip
           ? "flex h-dvh w-full flex-col bg-app-canvas"
@@ -298,7 +302,7 @@ export default function RecordingWindow() {
         <VoiceWindowResizeHandles
           bounds={pageBounds}
           edges={view ? undefined : ["e", "w"]}
-          label="Resize recording window"
+          label={t(m.resizeWindow)}
           min={minPageSize}
           onResize={({ height, left, top, width }) => {
             // Resizing places the window by its own corner from then on.

@@ -10,6 +10,20 @@ export const localModelsMessages = defineMessages("localModels", {
   thisComputer: "this computer",
   computerPicker: "Computer",
   computerOffline: "{name} · Offline",
+  computerSearchLabel: "Search computers",
+  computerSearchPlaceholder: "Search computers…",
+  computerSearchClear: "Clear computer search",
+  computerStatusFilter: "Filter computers by status",
+  computerFilterAll: "All",
+  computerFilterOnline: "Online",
+  computerFilterOffline: "Offline",
+  computerGroupOnline: "Online",
+  computerGroupOffline: "Offline",
+  computerStatusOffline: "Offline",
+  computerEmptyQuery: 'No computers match "{query}".',
+  computerEmptyOnline: "No online computers.",
+  computerEmptyOffline: "No offline computers.",
+  computerClearFilters: "Clear filters",
   agentsUse: "Agents on {computer} use {source}",
   memoryInUse: "{used} of {total} memory in use",
   gpuMemoryInUse: "{used} of {total} GPU memory in use",
@@ -91,6 +105,16 @@ export const localModelsMessages = defineMessages("localModels", {
   endingUnload: "Unloading",
   endingDiscard: "Discarding",
   openChat: "Open chat",
+  featured: "Featured",
+  featuredNew: "New",
+  featuredSpotlightRegion: "Featured model: Inkling 2 Mini",
+  featuredByThinkingMachines: "Featured · Thinking Machines",
+  featuredInklingSummary:
+    "26.4B looped MoE (3.4B active) built for local agentic coding and vision — Apache 2.0.",
+  featuredReadAnnouncement: "Read announcement",
+  featuredHuggingFace: "Hugging Face",
+  featuredNotInCatalog:
+    "Not in this computer's local model catalog yet. Update Linger's local models runtime if you're on an older version.",
   recommended: "Recommended",
   runsSlower: "runs slower",
   noRoomYet: "no room to load yet",
@@ -396,6 +420,10 @@ export const localModelsMessages = defineMessages("localModels", {
   // Why a model-source switch, endpoint test or read failed.
   sourceAgentsWorking: "Agents on this computer are working on tasks.",
   sourceByokAuthFailed: "The endpoint rejected the API key.",
+  sourceByokGatewayFailed:
+    "The computer couldn't configure its local BYOK gateway.",
+  sourceByokGatewayFailedDetail:
+    "The computer couldn't configure its local BYOK gateway: {detail}",
   sourceByokInvalidConfig:
     "The computer can't use this endpoint. An HTTPS endpoint needs an API key; plain HTTP works only on this computer or your local network.",
   sourceByokNotFound:

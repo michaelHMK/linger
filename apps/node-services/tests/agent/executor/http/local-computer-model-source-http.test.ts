@@ -306,4 +306,34 @@ describe("Agent Management model-source routes", () => {
         "The localmodels tool on this Computer does not support model sources.",
     });
   });
+
+  it("preserves BYOK_GATEWAY_FAILED and Computer diagnostic detail as HTTP 502", async () => {
+    const detail =
+      "cannot record Bifrost process identity ([Errno 1] Operation not permitted: '/bin/ps'); stopped it";
+    const app = buildTestApp(async () => {
+      throw new LocalModelSourceError("BYOK_GATEWAY_FAILED", detail, false);
+    });
+
+    const postRes = await app.request(basePath, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        mode: "byok",
+        runtime: "pi",
+        byok: {
+          base_url: "https://api.kimi.com/coding",
+          path: "/v1",
+          endpoint: "/chat/completions",
+          protocol: "openai-chat",
+          api_key: secretKey,
+          model_id: "k3",
+        },
+      }),
+    });
+    expect(postRes.status).toBe(502);
+    expect(await postRes.json()).toEqual({
+      code: "BYOK_GATEWAY_FAILED",
+      message: detail,
+    });
+  });
 });

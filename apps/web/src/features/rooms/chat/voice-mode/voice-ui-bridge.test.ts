@@ -350,7 +350,7 @@ describe("Voice Mode screen actions", () => {
         <button disabled>Share</button>
         <button style="display:none">Hidden</button>
       </main>
-      <section aria-label="Voice Mode window"><button>End Voice Mode</button></section>
+      <section aria-label="Voice Mode window" data-voice-window><button>End Voice Mode</button></section>
       <div role="dialog"><div role="option">Launch plan</div></div>`;
     const place: Record<string, [number, number]> = {
       Workspace: [10, 100],
@@ -445,7 +445,7 @@ describe("Voice Mode screen actions", () => {
         <input type="password" aria-label="Password" />
         <input aria-label="Read only" readonly />
       </main>
-      <section aria-label="Voice Mode window"><input aria-label="Box in the voice window" /></section>`;
+      <section aria-label="Voice Mode window" data-voice-window><input aria-label="Box in the voice window" /></section>`;
     for (const element of document.querySelectorAll<HTMLElement>(
       "input, textarea",
     ))

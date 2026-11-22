@@ -46,6 +46,10 @@ stops and names the open file.
 the `linger-computer login` flow. It discovers and version-gates the
 configured Codex, Claude, Pi, and Antigravity installations.
 It performs bounded protocol and authentication probes.
+A protocol probe passes once the Runtime answers the handshake, however the
+process exits after its input closes. When the handshake fails, the daemon log
+records `runner.runtime_probe.handshake_failed` with the exit status and the
+redacted end of stderr; the diagnostic sent to TeamHub stays categorical.
 It periodically refreshes authentication and unavailable Runtimes without a restart.
 The Claude check also probes idle Context homes, because each one can hold its
 own refreshed login. It reconciles only the four most recently used homes and
@@ -179,7 +183,9 @@ model.
 
 `internal/localmodels/source.go` runs `localmodels source status|check|models|apply`
 for `execute` commands of kind `model_source`, on their own goroutine so they
-never block Operation commands; `apply` is serialized. A BYOK key reaches the
+never block Operation commands; `apply` is serialized, maps apply timeouts to
+`MODEL_SOURCE_TIMEOUT`, scrubs any submitted BYOK API key from tool error
+messages before they leave the Computer, and logs structured refusal codes. A BYOK key reaches the
 tool on stdin, never in argv or logs, together with the address as base URL,
 path and endpoint and the protocol the owner's client chose; `check` sends one
 request there and `models` lists base URL + path + `/models`. The BYOK summary
@@ -190,6 +196,20 @@ same `apply` reported. It re-reads the file on every discovery tick to overlay
 the Runtimes' environment (`OverlayEnvironment`) and executable paths
 (`OverlayRuntimePaths`), and under BYOK lists only the BYOK model in each
 Runtime's catalog.
+
+Before a Run or model call on a Runtime whose profile is the BYOK source's,
+the Daemon checks the saved loopback gateway's `/health` (`EnsureGateway` in
+`source_gateway.go`), off the admission lock. A gateway that does not answer,
+because the endpoint was down when Linger started or a quit stopped it, is
+mounted again with `source apply --mode byok` from the configuration
+`localmodels` saved, serialized with `apply`; the kit probes the endpoint
+first. A failed mount fails the Run before its Runtime starts, with the
+public failure code of the tool's structured code: `BYOK_UNREACHABLE` and
+`NETWORK_UNAVAILABLE` become `network_error`, `BYOK_AUTH_FAILED`
+`authentication_required`; any other stays `execution_failed`. Model calls
+answer `auth_required` or `runtime_unavailable` with the tool's code in the
+reason. Runs that waited for a remount that failed meanwhile share its
+error instead of probing the endpoint again.
 
 ## Codex models cache
 

@@ -14,6 +14,7 @@ import (
 type fakeModelSourceManager struct {
 	deadline  time.Time
 	lastApply localmodels.ModelSourceApply
+	applyErr  error
 	calls     int
 }
 
@@ -49,6 +50,9 @@ func (f *fakeModelSourceManager) Apply(ctx context.Context, apply localmodels.Mo
 	f.calls++
 	f.deadline, _ = ctx.Deadline()
 	f.lastApply = apply
+	if f.applyErr != nil {
+		return wire.ModelSourceStatus{}, f.applyErr
+	}
 	return wire.ModelSourceStatus{
 		Mode:         apply.Mode,
 		Runtime:      apply.Runtime,
@@ -60,6 +64,8 @@ func (f *fakeModelSourceManager) Apply(ctx context.Context, apply localmodels.Mo
 		},
 	}, nil
 }
+
+func (f *fakeModelSourceManager) EnsureGateway(context.Context, string) error { return nil }
 
 func TestHandleModelSourceCommandValidatesOwnerExpiryAndActions(t *testing.T) {
 	manager := &fakeModelSourceManager{}
@@ -267,5 +273,52 @@ func TestHandleModelSourceCommandRejectsMissingOrUnknownByokProtocol(t *testing.
 	}
 	if len(stream.events) != 1 || stream.events[0].Type != protocol.EventCapabilityModelSourceSucceeded || manager.calls != 1 {
 		t.Fatalf("expected saved-BYOK apply to succeed once, events=%+v calls=%d", stream.events, manager.calls)
+	}
+}
+
+func TestHandleModelSourceCommandForwardsByokGatewayFailure(t *testing.T) {
+	const gatewayDetail = "cannot record Bifrost process identity ([Errno 1] Operation not permitted: '/bin/ps'); stopped it"
+	manager := &fakeModelSourceManager{
+		applyErr: &localmodels.ModelSourceError{
+			Code:    "BYOK_GATEWAY_FAILED",
+			Message: gatewayDetail,
+		},
+	}
+	d := &Daemon{
+		computerID:      "comp-1",
+		protocolVersion: protocol.Version,
+		modelSource:     manager,
+		owners:          []ComputerOwner{{TenantID: "tenant-1", OwnerActorID: "owner-1"}},
+	}
+	stream := &browserEventStream{}
+	expires := time.Now().Add(time.Minute).UTC().Truncate(time.Millisecond)
+	applyCmd, _ := json.Marshal(wire.CapabilityModelSource{
+		ProtocolVersion: protocol.Version,
+		CommandID:       "cmd-apply-gateway-failed",
+		RunnerID:        "comp-1",
+		TenantID:        "tenant-1",
+		OwnerActorID:    "owner-1",
+		ConnectionEpoch: 1,
+		ExpiresAt:       expires.Format(time.RFC3339Nano),
+		Type:            wire.TypeExecute,
+		Kind:            wire.KindModelSource,
+		Action:          "apply",
+		Mode:            "byok",
+		Runtime:         "pi",
+	})
+	if err := d.handleModelSourceCommand(t.Context(), stream, protocol.Command{
+		Type: protocol.CommandCapabilityModelSource, CommandID: "cmd-apply-gateway-failed", RunnerID: "comp-1", ConnectionEpoch: 1, Payload: applyCmd,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(stream.events) != 1 || stream.events[0].Type != protocol.EventCapabilityModelSourceFailed {
+		t.Fatalf("expected failed event, got %+v", stream.events)
+	}
+	var failed wire.CapabilityModelSourceFailed
+	if err := json.Unmarshal(stream.events[0].Payload, &failed); err != nil {
+		t.Fatal(err)
+	}
+	if failed.Error.Code != "BYOK_GATEWAY_FAILED" || failed.Error.Message != gatewayDetail || failed.Error.Retryable {
+		t.Fatalf("unexpected failed payload: %+v", failed.Error)
 	}
 }

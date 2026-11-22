@@ -16,8 +16,10 @@ import { teamHubData } from "@/features/teamhub/teamhub-api";
 import type { TeamHubClient } from "@/features/teamhub/teamhub-client";
 import type { useTeamHubRuntime } from "@/features/teamhub/teamhub-runtime";
 import type { TeamHubDocument } from "@/features/teamhub/teamhub-types";
+import { useT } from "@/i18n/use-translation";
 import { documentQueryKey } from "../room-queries";
 
+import { documentPageMessages as m } from "./document-page.messages";
 import { DocumentVersionPreview } from "./document-version-preview";
 import { EditableDocumentTitle } from "./editable-document-title";
 import { RoomDocumentBlockNoteEditor } from "./room-document-blocknote-editor-loader";
@@ -47,6 +49,7 @@ export function UnifiedDocumentBody({
   model,
   wikiLinks,
 }: UnifiedDocumentBodyProps) {
+  const t = useT();
   const {
     actor,
     client,
@@ -74,7 +77,7 @@ export function UnifiedDocumentBody({
       />
       {wikiLinks.pending ? (
         <p className="px-6 py-2 text-sm text-app-muted" role="status">
-          Opening Wiki page...
+          {t(m.openingWikiPage)}
         </p>
       ) : null}
       {wikiLinks.error ? (
@@ -130,6 +133,7 @@ function UnifiedDocumentEditorLayout({
   model,
   session,
 }: UnifiedDocumentEditorLayoutProps) {
+  const t = useT();
   const {
     autoFocusTitle,
     client,
@@ -176,7 +180,7 @@ function UnifiedDocumentEditorLayout({
       </div>
       {knowledgeTitle === undefined && !mailCanvas ? (
         <div className="room-document-content-lane mx-auto mb-8 flex min-h-8 flex-wrap items-center gap-2 text-sm text-app-muted">
-          <span>By {document.owner.display_name}</span>
+          <span>{t(m.byOwner, { name: document.owner.display_name })}</span>
           <span aria-hidden="true">·</span>
           <RoomDocumentSaveIndicator
             alwaysVisible
@@ -243,13 +247,14 @@ function DocumentStatusBanner({
 }
 
 function DocumentBodySkeleton() {
+  const t = useT();
   return (
     <div
-      aria-label="Opening document"
+      aria-label={t(m.openingDocument)}
       className="workspace-content mx-auto min-h-full w-full px-5 py-12"
       role="status"
     >
-      <span className="sr-only">Opening document...</span>
+      <span className="sr-only">{t(m.openingDocumentStatus)}</span>
       <div className="h-10 w-3/5 animate-pulse rounded-sm bg-muted motion-reduce:animate-none" />
       <div className="mt-4 h-4 w-2/5 animate-pulse rounded-sm bg-muted motion-reduce:animate-none" />
       <div className="mt-12 space-y-3">
@@ -334,6 +339,7 @@ function RoomDocumentRecoveryButton({
   name: string;
   session: RoomDocumentCollaborationSession;
 }) {
+  const t = useT();
   const save = useSyncExternalStore(
     session.subscribeSaveState,
     session.getSaveSnapshot,
@@ -344,15 +350,15 @@ function RoomDocumentRecoveryButton({
   }
   return (
     <Button
-      aria-label="Download recovery copy"
+      aria-label={t(m.downloadRecoveryCopy)}
       onClick={() => {
         void downloadRecoveryCopy(name, session.document);
       }}
-      title="Download recovery copy"
+      title={t(m.downloadRecoveryCopy)}
       tone="ghost"
     >
       <Icon icon={Download04Icon} />
-      Recovery copy
+      {t(m.recoveryCopy)}
     </Button>
   );
 }
@@ -449,6 +455,7 @@ function RoomDocumentConnectionStatus({
   onRetry(): void;
   session: RoomDocumentCollaborationSession;
 }) {
+  const t = useT();
   const save = useSyncExternalStore(
     session.subscribeSaveState,
     session.getSaveSnapshot,
@@ -457,11 +464,11 @@ function RoomDocumentConnectionStatus({
   if (save.status !== "Connection failed") return null;
   return (
     <div className="mb-3 flex items-center gap-2 text-sm text-app-danger">
-      <span aria-label="Document connection status" role="status">
-        Connection failed
+      <span aria-label={t(m.connectionStatus)} role="status">
+        {t(m.connectionFailed)}
       </span>
       <button className="underline" onClick={onRetry} type="button">
-        Retry connection
+        {t(m.retryConnection)}
       </button>
     </div>
   );
@@ -476,6 +483,7 @@ export function RoomDocumentSaveIndicator({
   isEditing: boolean;
   session: RoomDocumentCollaborationSession;
 }) {
+  const t = useT();
   const save = useSyncExternalStore(
     session.subscribeSaveState,
     session.getSaveSnapshot,
@@ -493,8 +501,8 @@ export function RoomDocumentSaveIndicator({
   if (save.status === "Connection failed") return saveStatusProbe;
   if (session.readOnly) {
     return (
-      <span aria-label="Document access mode" role="status">
-        Read only
+      <span aria-label={t(m.accessMode)} role="status">
+        {t(m.readOnly)}
       </span>
     );
   }
@@ -511,8 +519,8 @@ export function RoomDocumentSaveIndicator({
     return (
       <>
         {saveStatusProbe}
-        <span aria-label="Document save status" role="status">
-          Saved
+        <span aria-label={t(m.saveStatus)} role="status">
+          {t(m.saved)}
         </span>
       </>
     );
@@ -521,30 +529,30 @@ export function RoomDocumentSaveIndicator({
   const indicator = save.protocolError
     ? {
         icon: Alert02Icon,
-        label: "Save protocol error",
+        label: t(m.saveProtocolError),
         tone: "text-app-danger",
       }
     : save.status === "Offline pending"
       ? {
           icon: CloudOffIcon,
-          label: "Offline changes pending",
+          label: t(m.offlineChangesPending),
           tone: "text-app-warning",
         }
       : save.status === "Offline"
         ? {
             icon: CloudOffIcon,
-            label: "Offline",
+            label: t(m.offline),
             tone: "text-app-muted",
           }
         : save.status === "Connecting"
           ? {
               icon: null,
-              label: "Connecting...",
+              label: t(m.connecting),
               tone: "text-app-muted",
             }
           : {
               icon: null,
-              label: "Saving...",
+              label: t(m.saving),
               tone: "text-app-muted",
             };
 
@@ -552,7 +560,7 @@ export function RoomDocumentSaveIndicator({
     <>
       {saveStatusProbe}
       <p
-        aria-label="Document save status"
+        aria-label={t(m.saveStatus)}
         className={`mt-0.5 flex items-center gap-1 text-[12px] leading-4 ${indicator.tone}`}
         role="status"
       >

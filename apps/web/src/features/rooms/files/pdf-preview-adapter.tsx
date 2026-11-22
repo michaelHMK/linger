@@ -16,7 +16,10 @@ import {
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 import { Button } from "@/components/ui/button";
+import { translate } from "@/i18n/language";
+import { useT } from "@/i18n/use-translation";
 import type { ArtifactReadingPosition } from "./artifact-preview-cache";
+import { filePreviewMessages as m } from "./file-preview.messages";
 import { repairEscapedNewlinePdf } from "./pdf-preview-bytes";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -36,6 +39,7 @@ export function PdfPreviewAdapter({
   onError,
   readingPosition,
 }: PdfPreviewAdapterProps) {
+  const t = useT();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const onErrorRef = useRef(onError);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -91,9 +95,7 @@ export function PdfPreviewAdapter({
         }
         if (nextDocument.numPages > maxPdfPages) {
           void task?.destroy();
-          throw new Error(
-            `This PDF has more than ${maxPdfPages} pages and exceeds the basic preview limit.`,
-          );
+          throw new Error(translate(m.pdfTooManyPages, { max: maxPdfPages }));
         }
         setDocument(nextDocument);
         setPageNumber(
@@ -109,8 +111,8 @@ export function PdfPreviewAdapter({
         if (!active) return;
         const message =
           loadError instanceof Error
-            ? `PDF preview failed: ${loadError.message}`
-            : "PDF preview failed for this file.";
+            ? translate(m.pdfPreviewFailedDetail, { detail: loadError.message })
+            : translate(m.pdfPreviewFailed);
         setError(message);
         onErrorRef.current?.(message);
       });
@@ -135,7 +137,7 @@ export function PdfPreviewAdapter({
         const viewport = page.getViewport({ scale: fittedScale * scale });
         const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
         const context = canvas.getContext("2d", { alpha: false });
-        if (!context) throw new Error("Canvas rendering is unavailable.");
+        if (!context) throw new Error(translate(m.canvasUnavailable));
         canvas.width = Math.floor(viewport.width * pixelRatio);
         canvas.height = Math.floor(viewport.height * pixelRatio);
         canvas.style.width = `${Math.floor(viewport.width)}px`;
@@ -170,8 +172,8 @@ export function PdfPreviewAdapter({
         }
         const message =
           renderError instanceof Error
-            ? `PDF page rendering failed: ${renderError.message}`
-            : "PDF page rendering failed.";
+            ? translate(m.pdfPageFailedDetail, { detail: renderError.message })
+            : translate(m.pdfPageFailed);
         setError(message);
         onErrorRef.current?.(message);
       });
@@ -197,13 +199,13 @@ export function PdfPreviewAdapter({
 
   return (
     <section
-      aria-label={`PDF preview ${filename}`}
+      aria-label={t(m.pdfPreview, { name: filename })}
       className="flex h-full min-h-[420px] flex-col bg-app-surface-soft"
       role="document"
     >
       <div className="flex h-11 shrink-0 items-center justify-center gap-1 border-b border-app-border bg-app-surface px-2">
         <Button
-          aria-label="Previous PDF page"
+          aria-label={t(m.previousPdfPage)}
           disabled={!document || pageNumber <= 1}
           onClick={() => changePage(Math.max(1, pageNumber - 1))}
           size="icon"
@@ -212,10 +214,15 @@ export function PdfPreviewAdapter({
           <Icon icon={ArrowLeft01Icon} />
         </Button>
         <span className="min-w-24 text-center text-xs text-app-muted">
-          {document ? `${pageNumber} / ${document.numPages}` : "Loading"}
+          {document
+            ? t(m.pdfPageOfTotal, {
+                page: pageNumber,
+                total: document.numPages,
+              })
+            : t(m.pdfLoading)}
         </span>
         <Button
-          aria-label="Next PDF page"
+          aria-label={t(m.nextPdfPage)}
           disabled={!document || pageNumber >= document.numPages}
           onClick={() =>
             changePage(
@@ -229,7 +236,7 @@ export function PdfPreviewAdapter({
         </Button>
         <span className="mx-1 h-5 w-px bg-app-border" />
         <Button
-          aria-label="Zoom PDF out"
+          aria-label={t(m.zoomPdfOut)}
           disabled={scale <= 0.6}
           onClick={() => changeScale(Math.max(0.6, scale - 0.2))}
           size="icon"
@@ -238,7 +245,7 @@ export function PdfPreviewAdapter({
           <Icon icon={ZoomOutAreaIcon} />
         </Button>
         <Button
-          aria-label="Zoom PDF in"
+          aria-label={t(m.zoomPdfIn)}
           disabled={scale >= 2}
           onClick={() => changeScale(Math.min(2, scale + 0.2))}
           size="icon"
@@ -265,7 +272,7 @@ export function PdfPreviewAdapter({
           </p>
         ) : (
           <canvas
-            aria-label={`PDF page ${pageNumber}`}
+            aria-label={t(m.pdfPage, { page: pageNumber })}
             className="mx-auto block bg-white shadow-sm"
             ref={canvasRef}
           />
@@ -276,7 +283,7 @@ export function PdfPreviewAdapter({
             role="status"
           >
             <Spinner size={16} />
-            Rendering PDF...
+            {t(m.renderingPdf)}
           </div>
         ) : null}
       </div>

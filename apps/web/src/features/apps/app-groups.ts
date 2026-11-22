@@ -1,7 +1,9 @@
+import { teamHubCatalogText } from "@/features/teamhub/teamhub-catalog-text";
 import type { TeamHubExternalApp } from "@/features/teamhub/teamhub-types";
 import { type Translate, translate } from "@/i18n/language";
 import type { Message } from "@/i18n/messages";
 
+import { appDescriptionMessages as d } from "./app-descriptions.messages";
 import { connectorMessages as m } from "./connectors.messages";
 
 export interface AppGroup {
@@ -90,4 +92,39 @@ export function groupCatalogApps(apps: readonly TeamHubExternalApp[]) {
     group,
     apps: group.apps.flatMap((key) => byKey.get(key) ?? []),
   })).filter((entry) => entry.apps.length > 0);
+}
+
+const APP_DESCRIPTIONS: Record<string, Message<string>> = {
+  calendly: d.calendly,
+  canva: d.canva,
+  discord: d.discord,
+  facebook: d.facebook,
+  fal_ai: d.falAi,
+  figma: d.figma,
+  github: d.github,
+  gmail: d.mail,
+  google_calendar: d.googleCalendar,
+  google_meet: d.googleMeet,
+  googledrive: d.googleDrive,
+  granola: d.granola,
+  higgsfield: d.higgsfield,
+  linear: d.linear,
+  notion: d.notion,
+  outlook: d.mail,
+  outlook_calendar: d.outlookCalendar,
+  slack: d.slack,
+};
+
+/**
+ * A catalog app's full description: TeamHub's own text in English and for
+ * apps without a copy here.
+ */
+export function appDescription(
+  app: TeamHubExternalApp,
+  t: Translate = translate,
+) {
+  const description = Object.hasOwn(APP_DESCRIPTIONS, app.key)
+    ? APP_DESCRIPTIONS[app.key]
+    : undefined;
+  return teamHubCatalogText(app.description, description, t);
 }

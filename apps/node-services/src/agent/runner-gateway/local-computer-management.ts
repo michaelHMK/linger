@@ -48,6 +48,10 @@ export const FIRST_PI_MODEL_INVOKE_COMPUTER_VERSION = "0.55.0";
 // reports them back. An older Computer closes the connection on a byok input
 // that carries them, so it gets no BYOK command and no `byok_endpoint`.
 export const FIRST_BYOK_ENDPOINT_COMPUTER_VERSION = "0.56.0";
+// The first release that decodes `stop_hook` on `provider.prepare`,
+// `operation.prepare`, and `operation.start`. An older Computer rejects the
+// unknown field and closes the connection, so the field is omitted for it.
+export const FIRST_STOP_HOOK_COMPUTER_VERSION = "0.57.0";
 
 const COMPUTER_RELEASE_VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 

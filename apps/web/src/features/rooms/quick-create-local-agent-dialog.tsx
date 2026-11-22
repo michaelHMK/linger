@@ -30,6 +30,7 @@ import {
 } from "./quick-create-general-agent-page";
 import { AgentCreationProgress } from "./agent-creation-progress";
 import { createAgentMessages } from "./create-agent.messages";
+import { runtimeModelLabel } from "./members/runtime-model-label";
 
 const localRuntimeLabels: Record<TeamHubLocalRuntimeType, string> = {
   claude: "Claude Code",
@@ -409,7 +410,7 @@ export function QuickCreateLocalAgentDialog({
                     >
                       {modelOptions.map((model) => (
                         <SelectItem key={model.id} value={model.id}>
-                          {model.label}
+                          {runtimeModelLabel(model, t)}
                         </SelectItem>
                       ))}
                     </Select>

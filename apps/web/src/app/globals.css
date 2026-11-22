@@ -1669,13 +1669,14 @@ a[href][aria-disabled="true"],
   :root[data-desktop-shell] .room-secondary-navigation-search:hover {
     background: rgb(0 0 0 / 8%);
   }
-  /* The rail and the list sit on the frame, as the bar along the top does. */
-  :root[data-desktop-shell] .app-navigation,
+  /* The list sits on the frame, as the bar along the top does. The rail
+     and the navigation around it stack above the page for the rail's
+     labels, so they let the frame show through rather than paint over the
+     shadow on the left edge of the card beside them. */
   :root[data-desktop-shell] .app-navigation .app-secondary-navigation {
     background: var(--app-sidebar);
   }
-  /* The rail stacks above the page for its labels, so it lets the frame
-     show through rather than paint over the card's edge beside it. */
+  :root[data-desktop-shell] .app-navigation,
   :root[data-desktop-shell] .app-primary-navigation {
     background: transparent;
   }
@@ -1912,8 +1913,10 @@ a[href][aria-disabled="true"],
     line-height: 1.25;
   }
 
-  /* Library: the browser layout, as one card under an empty bar. */
+  /* Library: the browser layout, as one card under an empty bar. The
+     layout leaves the card's shadow unclipped; the card clips its content. */
   :root[data-desktop-shell] .library-layout {
+    overflow: visible;
     background: transparent;
   }
   :root[data-desktop-shell] .library-layout-body {

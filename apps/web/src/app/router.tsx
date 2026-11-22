@@ -41,12 +41,14 @@ import {
 } from "@/features/rooms/room-surface";
 import { routeLayoutKey } from "@/features/rooms/route-layout-key";
 import { RoomChatLoading } from "@/features/rooms/route-loading-surface";
+import { shellExtrasMessages } from "@/features/rooms/shell-extras.messages";
 import {
   TeamHubError,
   type TeamHubClient,
 } from "@/features/teamhub/teamhub-client";
 import type { TeamHubRuntime } from "@/features/teamhub/teamhub-runtime";
 import { commonMessages } from "@/i18n/common.messages";
+import { translate } from "@/i18n/language";
 import { useT } from "@/i18n/use-translation";
 import {
   tenantWorkItemTargetQueryOptions,
@@ -88,7 +90,7 @@ export function createAppRoutes(
           const targetTenant = tenants.items[0];
 
           if (!targetTenant) {
-            throw new Error("This Account has no Space.");
+            throw new Error(translate(shellExtrasMessages.noSpace));
           }
 
           if (!request.signal.aborted) {

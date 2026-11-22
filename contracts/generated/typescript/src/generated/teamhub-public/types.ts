@@ -4423,6 +4423,19 @@ export interface components {
      * @enum {string}
      */
     TenantAgentAvailabilityStatus: "online" | "error" | "offline" | "unknown";
+    /**
+     * @description Why the Agent has its status, as a stable code clients word in their own language. `label` and `current_activity.summary` carry the same state in English for clients that do not know the code. With `runtime_error` the summary is the Runtime's own diagnostic text.
+     * @enum {string}
+     */
+    TenantAgentAvailabilityReason:
+      | "online"
+      | "status_unavailable"
+      | "reconnecting"
+      | "authentication_required"
+      | "waiting_for_computer"
+      | "runtime_not_installed"
+      | "runtime_incompatible"
+      | "runtime_error";
     TenantAgentCurrentActivity: {
       summary: string;
       run_id?: components["schemas"]["Id"];
@@ -4430,7 +4443,9 @@ export interface components {
     };
     TenantAgentAvailability: {
       status: components["schemas"]["TenantAgentAvailabilityStatus"];
+      /** @description English wording of the status, the fallback for clients that do not know `reason`. */
       label: string;
+      reason?: components["schemas"]["TenantAgentAvailabilityReason"];
       /**
        * Format: int64
        * @description Number of non-terminal managed Tasks assigned to this Agent.
@@ -4973,7 +4988,7 @@ export interface components {
       terminated_run_count?: number;
     };
     /**
-     * @description error.code of a refused model-source request (403, 409, 502, 503, 504); 400, 401, and 404 use the common codes. LOCAL_COMPUTER_OFFLINE: the Computer is not connected. MODEL_SOURCE_FORBIDDEN: the viewer is not the Computer owner. MODEL_SOURCE_UNAVAILABLE: the Computer has no localmodels tool or cannot switch model sources. AGENT_HAS_ACTIVE_RUNS: Agents on the Computer have running work and force_terminate was false; details carries one entry per such Agent, with field "agent" and the Agent's display name as reason. RUNTIME_NOT_ENABLED, LOCAL_MODEL_NO_ROOM, LOCAL_MODEL_UNKNOWN, and the BYOK_ codes are the Computer's refusals (409); for BYOK_AUTH_FAILED, BYOK_NOT_FOUND, BYOK_UNREACHABLE and BYOK_UPSTREAM_REJECTED, message is the Computer's own and names the address it sent to and the endpoint's HTTP status. MODEL_SOURCE_FAILED: the Computer failed with an error that has no code of its own here (502). MODEL_SOURCE_SERVICE_UNAVAILABLE: Agent Service could not be reached (503). MODEL_SOURCE_UNCONFIRMED: the Computer had not answered by the deadline; it may still switch (504).
+     * @description error.code of a refused model-source request (403, 409, 502, 503, 504); 400, 401, and 404 use the common codes. LOCAL_COMPUTER_OFFLINE: the Computer is not connected. MODEL_SOURCE_FORBIDDEN: the viewer is not the Computer owner. MODEL_SOURCE_UNAVAILABLE: the Computer has no localmodels tool or cannot switch model sources. AGENT_HAS_ACTIVE_RUNS: Agents on the Computer have running work and force_terminate was false; details carries one entry per such Agent, with field "agent" and the Agent's display name as reason. RUNTIME_NOT_ENABLED, LOCAL_MODEL_NO_ROOM, LOCAL_MODEL_UNKNOWN, and the BYOK endpoint refusals (BYOK_INVALID_CONFIG, BYOK_AUTH_FAILED, BYOK_NOT_FOUND, BYOK_UNREACHABLE, BYOK_UPSTREAM_REJECTED) are the Computer's refusals (409); for BYOK_AUTH_FAILED, BYOK_NOT_FOUND, BYOK_UNREACHABLE and BYOK_UPSTREAM_REJECTED, message is the Computer's own and names the address it sent to and the endpoint's HTTP status. BYOK_GATEWAY_FAILED: the Computer could not start, stop, or configure its local BYOK gateway (502); when the Computer reported a diagnostic message, message carries it and details carries one entry with field "gateway" and that diagnostic as reason. MODEL_SOURCE_FAILED: the Computer failed with an error that has no code of its own here (502). MODEL_SOURCE_SERVICE_UNAVAILABLE: Agent Service could not be reached (503). MODEL_SOURCE_UNCONFIRMED: the Computer had not answered by the deadline; it may still switch (504).
      * @enum {string}
      */
     ModelSourceErrorCode:
@@ -4989,6 +5004,7 @@ export interface components {
       | "BYOK_NOT_FOUND"
       | "BYOK_UNREACHABLE"
       | "BYOK_UPSTREAM_REJECTED"
+      | "BYOK_GATEWAY_FAILED"
       | "MODEL_SOURCE_FAILED"
       | "MODEL_SOURCE_SERVICE_UNAVAILABLE"
       | "MODEL_SOURCE_UNCONFIRMED";

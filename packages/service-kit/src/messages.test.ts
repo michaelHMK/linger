@@ -5,7 +5,7 @@ import {
   formatMessage,
   formatMessageParts,
   type Catalog,
-} from "./messages";
+} from "./messages.js";
 
 const messages = defineMessages("sample", {
   greeting: "Hello, {name}",

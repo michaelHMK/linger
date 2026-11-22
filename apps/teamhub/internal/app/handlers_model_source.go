@@ -37,6 +37,7 @@ var modelSourceRefusalCodes = map[string]httpapi.ModelSourceErrorCode{
 	"BYOK_NOT_FOUND":           httpapi.ModelSourceErrorCodeByokNotFound,
 	"BYOK_UNREACHABLE":         httpapi.ModelSourceErrorCodeByokUnreachable,
 	"BYOK_UPSTREAM_REJECTED":   httpapi.ModelSourceErrorCodeByokUpstreamRejected,
+	"BYOK_GATEWAY_FAILED":      httpapi.ModelSourceErrorCodeByokGatewayFailed,
 	"MODEL_SOURCE_TIMEOUT":     httpapi.ModelSourceErrorCodeModelSourceUnconfirmed,
 	"BYOK_CHECK_TIMEOUT":       httpapi.ModelSourceErrorCodeModelSourceUnconfirmed,
 }
@@ -54,19 +55,22 @@ var modelSourceErrorMessages = map[httpapi.ModelSourceErrorCode]string{
 	httpapi.ModelSourceErrorCodeByokNotFound:                  "Nothing answered at the endpoint address, or it does not serve this model",
 	httpapi.ModelSourceErrorCodeByokUnreachable:               "The Computer could not reach the endpoint",
 	httpapi.ModelSourceErrorCodeByokUpstreamRejected:          "The endpoint rejected the test request",
+	httpapi.ModelSourceErrorCodeByokGatewayFailed:             "The Computer could not configure its local BYOK gateway",
 	httpapi.ModelSourceErrorCodeModelSourceFailed:             "The Computer could not change its model source",
 	httpapi.ModelSourceErrorCodeModelSourceServiceUnavailable: "Model sources are unavailable",
 	httpapi.ModelSourceErrorCodeModelSourceUnconfirmed:        "The Computer did not answer in time",
 }
 
-// For these refusals the Computer's own message names the address it sent to
-// and the endpoint's HTTP status. It never holds the key, and only the
-// Computer's owner can send a BYOK request.
+// For these refusals the Computer's own message carries actionable detail
+// (the address and HTTP status for endpoint refusals, or the local gateway
+// failure reason for BYOK_GATEWAY_FAILED). It never holds the key, and only
+// the Computer's owner can send a BYOK request.
 var modelSourceComputerMessageCodes = map[httpapi.ModelSourceErrorCode]bool{
 	httpapi.ModelSourceErrorCodeByokAuthFailed:       true,
 	httpapi.ModelSourceErrorCodeByokNotFound:         true,
 	httpapi.ModelSourceErrorCodeByokUnreachable:      true,
 	httpapi.ModelSourceErrorCodeByokUpstreamRejected: true,
+	httpapi.ModelSourceErrorCodeByokGatewayFailed:    true,
 }
 
 const maxComputerMessageLength = 1024
@@ -74,6 +78,7 @@ const maxComputerMessageLength = 1024
 var modelSourceErrorStatuses = map[httpapi.ModelSourceErrorCode]int{
 	httpapi.ModelSourceErrorCodeLocalComputerOffline:          http.StatusServiceUnavailable,
 	httpapi.ModelSourceErrorCodeModelSourceForbidden:          http.StatusForbidden,
+	httpapi.ModelSourceErrorCodeByokGatewayFailed:             http.StatusBadGateway,
 	httpapi.ModelSourceErrorCodeModelSourceFailed:             http.StatusBadGateway,
 	httpapi.ModelSourceErrorCodeModelSourceServiceUnavailable: http.StatusServiceUnavailable,
 	httpapi.ModelSourceErrorCodeModelSourceUnconfirmed:        http.StatusGatewayTimeout,
@@ -365,12 +370,19 @@ func (a *App) writeModelSourceFailure(c *gin.Context, computerID, action string,
 		if !known {
 			a.logger.Warn("model_source.refused", "computer_id", computerID, "action", action, "refusal_code", refusal.Code)
 			code = httpapi.ModelSourceErrorCodeModelSourceFailed
+		} else if code == httpapi.ModelSourceErrorCodeByokGatewayFailed {
+			a.logger.Warn("model_source.gateway_failed", "computer_id", computerID, "action", action, "refusal_code", refusal.Code)
 		}
 		message := modelSourceErrorMessages[code]
-		if modelSourceComputerMessageCodes[code] && refusal.Message != "" && len(refusal.Message) <= maxComputerMessageLength {
-			message = refusal.Message
+		var details []httpapi.ErrorDetail
+		trimmed := strings.TrimSpace(refusal.Message)
+		if modelSourceComputerMessageCodes[code] && trimmed != "" && len(trimmed) <= maxComputerMessageLength {
+			message = trimmed
+			if code == httpapi.ModelSourceErrorCodeByokGatewayFailed {
+				details = []httpapi.ErrorDetail{{Field: "gateway", Reason: trimmed}}
+			}
 		}
-		a.writeModelSourceErrorMessage(c, code, message)
+		a.writeModelSourceErrorDetails(c, code, message, details)
 	default:
 		a.logger.Error("model_source.failed", "computer_id", computerID, "action", action, "error", err)
 		a.writeModelSourceError(c, httpapi.ModelSourceErrorCodeModelSourceServiceUnavailable)
@@ -378,13 +390,17 @@ func (a *App) writeModelSourceFailure(c *gin.Context, computerID, action string,
 }
 
 func (a *App) writeModelSourceError(c *gin.Context, code httpapi.ModelSourceErrorCode) {
-	a.writeModelSourceErrorMessage(c, code, modelSourceErrorMessages[code])
+	a.writeModelSourceErrorDetails(c, code, modelSourceErrorMessages[code], nil)
 }
 
-func (a *App) writeModelSourceErrorMessage(c *gin.Context, code httpapi.ModelSourceErrorCode, message string) {
+func (a *App) writeModelSourceErrorDetails(c *gin.Context, code httpapi.ModelSourceErrorCode, message string, details []httpapi.ErrorDetail) {
 	status, found := modelSourceErrorStatuses[code]
 	if !found {
 		status = http.StatusConflict
+	}
+	if len(details) > 0 {
+		a.writeErrorWithDetails(c, status, string(code), message, details)
+		return
 	}
 	a.writeError(c, status, string(code), message)
 }

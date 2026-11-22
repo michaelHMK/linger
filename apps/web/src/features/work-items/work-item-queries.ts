@@ -4,6 +4,9 @@ import { collectTeamHubCursorPages } from "@/features/teamhub/teamhub-cursor-pag
 import { TeamHubError } from "@/features/teamhub/teamhub-error";
 import { teamHubData } from "@/features/teamhub/teamhub-api";
 import type { TeamHubClient } from "@/features/teamhub/teamhub-client";
+import { translate } from "@/i18n/language";
+
+import { workItemsMessages as m } from "./work-items.messages";
 
 export function tenantWorkItemTargetQueryKey(
   tenantId: string,
@@ -31,7 +34,8 @@ export function tenantWorkItemTargetQueryOptions(
       if (item.id !== workItemId || item.tenant_id !== tenantId) {
         throw new TeamHubError({
           code: "WORK_ITEM_NOT_FOUND",
-          message: "Work Item is unavailable in this Tenant.",
+          // Shown on the Dashboard, worded when the check fails.
+          message: translate(m.workItemUnavailable),
           status: 404,
         });
       }
@@ -72,9 +76,7 @@ export function tenantAgentWorkItemsQueryOptions(
         ),
       );
       if (page.items.some((item) => item.tenant_id !== tenantId)) {
-        throw new Error(
-          "Agent Work Item list does not match the active Tenant.",
-        );
+        throw new Error(translate(m.agentListTenantMismatch));
       }
       return {
         ...page,
@@ -108,9 +110,7 @@ export function tenantWorkItemsDashboardQueryOptions(
         ),
       );
       if (page.items.some((item) => item.tenant_id !== tenantId)) {
-        throw new Error(
-          "Work Item Dashboard does not match the active Tenant.",
-        );
+        throw new Error(translate(m.dashboardTenantMismatch));
       }
       return page;
     },

@@ -29,6 +29,11 @@ import { formatLocale, type Translation } from "@/i18n/language";
 import { useT, useTranslation } from "@/i18n/use-translation";
 import { formatUpdatedAt } from "@/lib/date-format";
 import { cn } from "@/lib/cn";
+import {
+  webSearchBackendDescription,
+  webSearchBackendFreeTier,
+  webSearchBackendFreeUse,
+} from "@/features/web-search/web-search-backend-text";
 
 import { WEB_SEARCH_FILTER } from "./app-groups";
 import { AppLogo } from "./app-logo";
@@ -120,7 +125,7 @@ function WebSearchBackendCard({
   const translation = useTranslation();
   const { t } = translation;
   const state = connectionState(backend, translation);
-  const line = state?.label ?? backend.description;
+  const line = state?.label ?? webSearchBackendDescription(backend, t);
   const canConnect =
     isWebSearchKeyBackend(backend) &&
     (backend.key_state === "none" || state?.tone === "danger");
@@ -193,7 +198,7 @@ function WebSearchBackendDialog({
     <ModalDialog
       className="app-key-dialog"
       closeOnBackdrop
-      description={backend.description}
+      description={webSearchBackendDescription(backend, t)}
       onClose={onClose}
       size="md"
       title={backend.name}
@@ -206,10 +211,14 @@ function WebSearchBackendDialog({
               : t(m.searches)}
           </Fact>
           {backend.free_tier ? (
-            <Fact label={t(m.factFreeTier)}>{backend.free_tier}</Fact>
+            <Fact label={t(m.factFreeTier)}>
+              {webSearchBackendFreeTier(backend, t) ?? ""}
+            </Fact>
           ) : null}
           {backend.tier_text ? (
-            <Fact label={t(m.factFreeUse)}>{backend.tier_text}</Fact>
+            <Fact label={t(m.factFreeUse)}>
+              {webSearchBackendFreeUse(backend, t) ?? ""}
+            </Fact>
           ) : null}
           {usage ? <Fact label={t(m.factUsage)}>{usage}</Fact> : null}
         </dl>

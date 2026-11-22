@@ -23,7 +23,7 @@ const card: DecisionMessageCard = {
   decision_id: "search-1",
   kind: "search_key",
   status: "pending",
-  title: "Add a Tavily API key so I can search the web.",
+  title: "Please add a Tavily API key so I can search the web.",
   search_key: { backend: "tavily", origin: "requested", reason: "missing" },
   decision_owner: { id: "alice", display_name: "Alice", kind: "human" },
   requester: { id: "writer", display_name: "Writer", kind: "agent" },
@@ -73,7 +73,7 @@ describe("Web search key card", () => {
     const { decision, runtime, saved } = setup();
     const box = await findBox();
     expect(box).toHaveTextContent(
-      "Add a Tavily API key so I can search the web.",
+      "Please add a Tavily API key so I can search the web.",
     );
     expect(within(box).getByText("Requested")).toBeVisible();
     expect(

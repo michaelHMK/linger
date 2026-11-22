@@ -6,6 +6,10 @@ import {
   CheckListIcon,
 } from "@hugeicons/core-free-icons";
 import { Icon } from "@/components/ui/icon";
+import { commonMessages } from "@/i18n/common.messages";
+import { formatLocale } from "@/i18n/language";
+import type { Message } from "@/i18n/messages";
+import { useT, useTranslation } from "@/i18n/use-translation";
 import { useCallback, useState, type RefCallback } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 
@@ -25,27 +29,22 @@ import {
 } from "./work-item-queries";
 import { dashboardWorkItemPath } from "./work-item-routes";
 import { createWorkItemRoomFilterModel } from "./work-item-room-filter";
+import { workItemsMessages as m } from "./work-items.messages";
 
 interface DashboardColumn {
   id: "todo" | "in-progress" | "done" | "closed";
-  label: "Todo" | "In progress" | "Done" | "Closed";
+  label: Message<string>;
 }
 
 const dashboardColumns: readonly DashboardColumn[] = [
-  { id: "todo", label: "Todo" },
-  { id: "in-progress", label: "In progress" },
-  { id: "done", label: "Done" },
-  { id: "closed", label: "Closed" },
+  { id: "todo", label: m.columnTodo },
+  { id: "in-progress", label: m.columnInProgress },
+  { id: "done", label: m.columnDone },
+  { id: "closed", label: m.columnClosed },
 ];
 
-const dashboardDateFormatter = dateTimeFormat({
-  day: "numeric",
-  month: "short",
-  timeZone: "UTC",
-  year: "numeric",
-});
-
 export function WorkItemsPage() {
+  const t = useT();
   const { client } = useTeamHubRuntime();
   const params = useParams();
   const tenantId = requireRoomRouteParam(params.tenantId, "Tenant");
@@ -101,7 +100,7 @@ export function WorkItemsPage() {
   const rooms = roomsQuery.data;
   if (!data || !rooms) return <WorkItemsLoading />;
   const items = mergeFocusedWorkItem(data.items, focusedWorkItemQuery.data);
-  const roomFilter = createWorkItemRoomFilterModel(rooms.items, items);
+  const roomFilter = createWorkItemRoomFilterModel(rooms.items, items, t);
   const roomId = searchParams.get("room")?.trim() ?? "";
   const dashboardSearch = roomId
     ? new URLSearchParams({ room: roomId }).toString()
@@ -122,16 +121,19 @@ export function WorkItemsPage() {
       <header className="work-items-header shrink-0 border-b border-app-border px-5 py-3 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl text-foreground">Dashboard</h1>
+            <h1 className="text-2xl text-foreground">{t(m.dashboard)}</h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
               {filteredItems.length === items.length
-                ? itemCount(items.length)
-                : `${filteredItems.length} of ${items.length} items`}
+                ? t(m.itemCount, { count: items.length })
+                : t(m.filteredCount, {
+                    count: items.length,
+                    shown: filteredItems.length,
+                  })}
             </p>
           </div>
           {items.length ? (
             <div
-              aria-label="Work Item filters"
+              aria-label={t(m.filters)}
               className="w-[240px] max-w-full"
               role="group"
             >
@@ -171,7 +173,7 @@ export function WorkItemsPage() {
               <Icon icon={CheckListIcon} size={16} />
             </span>
             <h2 className="mt-3 text-sm font-semibold text-app-ink">
-              No Work Items yet
+              {t(m.noWorkItems)}
             </h2>
           </div>
         </section>
@@ -193,10 +195,6 @@ function mergeFocusedWorkItem(
   );
 }
 
-function itemCount(count: number) {
-  return `${count} ${count === 1 ? "item" : "items"}`;
-}
-
 function WorkItemsLoading() {
   return <AuthenticatedRouteLoading pathname="/dashboard" rooms={[]} />;
 }
@@ -210,22 +208,23 @@ function WorkItemsError({
   isRetrying: boolean;
   onRetry: () => void;
 }) {
+  const t = useT();
   const forbidden = error instanceof TeamHubError && error.status === 403;
   return (
     <main
-      aria-label="Dashboard error"
+      aria-label={t(m.dashboardError)}
       className="work-items-surface flex min-h-0 flex-1 items-center justify-center bg-app-surface px-6 py-12 text-center"
       role="alert"
     >
       <div className="max-w-md">
         <h1 className="text-lg text-app-ink">
-          {forbidden ? "Access denied" : "Dashboard unavailable"}
+          {t(forbidden ? m.accessDenied : m.dashboardUnavailable)}
         </h1>
         <p className="mt-2 text-sm leading-6 text-app-muted">
-          {error.message || "TeamHub could not load Work Items."}
+          {error.message || t(m.loadFailed)}
         </p>
         <Button className="mt-5" disabled={isRetrying} onClick={onRetry}>
-          {isRetrying ? "Trying again…" : "Try again"}
+          {isRetrying ? t(m.tryingAgain) : t(commonMessages.tryAgain)}
         </Button>
       </div>
     </main>
@@ -241,16 +240,17 @@ function RoomFilter({
   options: Array<{ id: string; label: string }>;
   value: string;
 }) {
+  const t = useT();
   return (
     <label className="grid min-w-0 gap-1 text-xs font-medium text-muted-foreground">
-      Room
+      {t(m.room)}
       <Select
-        aria-label="Room"
+        aria-label={t(m.room)}
         className="h-8 w-full min-w-0 rounded-md border border-border bg-card px-2 text-sm text-foreground outline-none transition-colors hover:border-border-hover focus-visible:border-foreground focus-visible:ring-2 focus-visible:ring-ring"
         onValueChange={onChange}
         value={value}
       >
-        <SelectItem value="">All rooms</SelectItem>
+        <SelectItem value="">{t(m.allRooms)}</SelectItem>
         {options.map((option) => (
           <SelectItem key={option.id} value={option.id}>
             {option.label}
@@ -278,12 +278,14 @@ function WorkItemColumn({
   search: string;
   tenantId: string;
 }) {
+  const { language, t } = useTranslation();
+  const locale = formatLocale(language);
   const [closedExpanded, setClosedExpanded] = useState(true);
   const isClosed = column.id === "closed";
 
   return (
     <section
-      aria-label={column.label}
+      aria-label={t(column.label)}
       className="work-item-column flex min-h-0 min-w-0 flex-col"
     >
       <header className="flex h-11 shrink-0 items-center justify-between px-2">
@@ -299,10 +301,10 @@ function WorkItemColumn({
           <Button
             aria-controls="work-item-column-closed-items"
             aria-expanded={closedExpanded}
-            aria-label={closedExpanded ? "Collapse closed" : "Expand closed"}
+            aria-label={t(closedExpanded ? m.collapseClosed : m.expandClosed)}
             onClick={() => setClosedExpanded((expanded) => !expanded)}
             size="compactIcon"
-            title={closedExpanded ? "Collapse closed" : "Expand closed"}
+            title={t(closedExpanded ? m.collapseClosed : m.expandClosed)}
             tone="ghost"
           >
             {closedExpanded ? (
@@ -356,7 +358,11 @@ function WorkItemColumn({
                   </span>
                   {item.assignees.length ? (
                     <span
-                      aria-label={`Assigned to ${item.assignees.map(({ actor }) => actor.display_name).join(", ")}`}
+                      aria-label={t(m.assignedTo, {
+                        names: item.assignees
+                          .map(({ actor }) => actor.display_name)
+                          .join(", "),
+                      })}
                       className="flex shrink-0 -space-x-1"
                       role="group"
                     >
@@ -383,13 +389,15 @@ function WorkItemColumn({
                     </span>
                     <span aria-hidden="true">·</span>
                     <span className="shrink-0">
-                      {item.kind === "issue" ? "Issue" : "Task"} #{item.number}
+                      {t(item.kind === "issue" ? m.issueNumber : m.taskNumber, {
+                        number: String(item.number),
+                      })}
                     </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-2">
                     <WorkItemStatus compact status={column.id} />
                     <time dateTime={item.updated_at}>
-                      {formatDashboardDate(item.updated_at)}
+                      {formatDashboardDate(item.updated_at, locale)}
                     </time>
                   </span>
                 </span>
@@ -409,6 +417,7 @@ function WorkItemStatus({
   compact?: boolean;
   status: DashboardColumn["id"];
 }) {
+  const t = useT();
   const column = dashboardColumns.find((candidate) => candidate.id === status)!;
 
   return (
@@ -417,7 +426,7 @@ function WorkItemStatus({
       data-compact={compact ? "true" : "false"}
       data-status={status}
     >
-      <span>{column.label}</span>
+      <span>{t(column.label)}</span>
     </span>
   );
 }
@@ -432,6 +441,9 @@ function capitalize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function formatDashboardDate(value: string) {
-  return dashboardDateFormatter.format(new Date(value));
+function formatDashboardDate(value: string, locale: string) {
+  return dateTimeFormat(
+    { day: "numeric", month: "short", timeZone: "UTC", year: "numeric" },
+    locale,
+  ).format(new Date(value));
 }

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { commonMessages } from "@/i18n/common.messages";
 import { useT } from "@/i18n/use-translation";
 
+import { shellExtrasMessages } from "../shell-extras.messages";
 import {
   useActorAvatarImage,
   useAgentAvatarRecord,
@@ -86,9 +87,13 @@ export function ActorAvatar({
     xs: "text-[10px]",
     xxs: "text-[8px]",
   }[size];
+  const t = useT();
+  // The fallback stays one value in code, so a nameless Agent keeps the same
+  // figure and tint in every language; only the words shown follow it.
   const displayName = name.trim() || "Unknown Actor";
-  const title = showTitle ? displayName : undefined;
-  const label = useT()(commonMessages.avatar, { name: displayName });
+  const shownName = name.trim() || t(shellExtrasMessages.unknownActor);
+  const title = showTitle ? shownName : undefined;
+  const label = t(commonMessages.avatar, { name: shownName });
   const uploadedImage = useActorAvatarImage(actorId);
   const agentRecord = useAgentAvatarRecord(
     kind === "agent" ? actorId : undefined,

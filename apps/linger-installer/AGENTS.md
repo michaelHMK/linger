@@ -30,6 +30,13 @@ on stderr for the desktop to show.
 Native sign-in sessions belong to an instance and its selected runtime. A changed
 setup choice must not reuse another runtime's URL or accept a code for its process;
 starting sign-in for the new runtime stops the previous runtime's pending login.
+A Codex start may name its login method: `browser` (localhost callback; on
+Linux it runs with `BROWSER=true` so only the caller opens the link, elsewhere
+the CLI opens its own page) or `device` (device code).
+Without one, macOS and Windows use the browser login, which opens its own
+page, and other platforms the device code. A start with another method replaces
+the running login. A failed login carries its `reason`; a timeout stays
+`timed_out` after the process exits.
 
 `--resume` (native source with `--instance`) starts an installed instance's
 stopped services headless, reusing its saved choices; the desktop client runs it
@@ -55,16 +62,22 @@ installed without extension support included) gets its approved plan applied
 again when the saved plan inputs still match the current choices; only a
 plan the person approved is ever applied, and a stack still not ready ends
 `LOCAL_MODELS_RECOVERY_REQUIRED` with the binding's reason codes in
-`details.reasons`. When the services already run, a local-models setup
+`details.reasons` (exposed on jobs as `errorReasons`). When the services already run, a local-models setup
 whose Computer still uses the local model source (`model-source.json` says
 `local` or does not exist yet) has its stack checked once
 (`restoreLocalModels`), since a quit stops the models but not the services: a
 stack that is not ready gets the same restore, then becomes the model source
-again. A source switched to a subscription or BYOK leaves the stack stopped;
+again; if that restore fails or throws (or a same-checkout cold resume cannot
+prepare the local model stack), the failure is logged and reported in the ready
+outcome's `details.localModelsDegraded` without failing the resume, so the
+person can still reach the workspace and the Models page. Resource-choice
+mismatches omit stale binding reason codes so Quick Install still triggers a
+replan. A source switched to a subscription or BYOK leaves the stack stopped;
 a saved BYOK source gets its Bifrost gateway mounted again from the saved
 configuration unless it already answers (`restoreByokSource`), and a failure
 is logged and reported in the ready outcome's `details.byokGateway`
-without failing the resume.
+without failing the resume; the Computer mounts it again before the next Run
+on it.
 A failed installation records the stage that caused it, even when native
 checkout preparation and runtime setup ran in parallel. A BYOK mount failure
 belongs to runtime and keeps the redacted provider error in the job.

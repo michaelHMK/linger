@@ -21,6 +21,7 @@ import { createBrowserTeamHubRuntime } from "@/features/teamhub/browser-teamhub-
 import { teamHubData } from "@/features/teamhub/teamhub-api";
 import { TeamHubRuntimeProvider } from "@/features/teamhub/teamhub-runtime";
 import { commonMessages } from "@/i18n/common.messages";
+import { reportLanguageToDesktop } from "@/i18n/desktop-language";
 import { restoreLanguage } from "@/i18n/language";
 import { useT } from "@/i18n/use-translation";
 
@@ -38,6 +39,7 @@ const root = createRoot(rootElement);
 // The remembered language is loaded before the first paint, so its reader
 // never sees the interface flash by in English. English loads nothing.
 void restoreLanguage().then(() => {
+  reportLanguageToDesktop();
   root.render(
     <StrictMode>
       <InitialAppLoading />

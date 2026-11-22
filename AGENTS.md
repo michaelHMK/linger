@@ -125,8 +125,9 @@ Memory, and Voice services.
 - The repository is English-only: docs, code, comments, logs, user-facing
   strings, prompts, Skills, tests, fixtures, and benchmark data.
   `make check-repository-gate` rejects CJK ideographs in changed files. The
-  one exception is the client's translation catalogs under
-  `apps/web/src/i18n/locales/`; text in another language goes nowhere else.
+  only exceptions are the translation catalogs under
+  `apps/web/src/i18n/locales/` (Web client) and `apps/desktop/src/i18n/locales/`
+  (desktop shell); text in another language goes nowhere else.
   - NO: a test fixture with a literal Chinese sentence.
   - OK: the same text as escaped code points (`"\u4f60\u597d"`), or kana,
     accented Latin, or emoji when any unspaced script will do.

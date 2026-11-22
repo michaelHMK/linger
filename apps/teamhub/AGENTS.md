@@ -128,6 +128,11 @@ Go service owning Human HTTP/SSE, Agent callbacks, and active product state.
   extra, or wrongly bound route. Handlers are `App` methods that read bound
   query and header parameters with `contractParams[T]` and path parameters
   with `c.Param`.
+- Text TeamHub writes for a person to read stays English and ships with the
+  meaning the client words it from: a status or error with a stable code, a
+  card with its kind and fields, catalog text with its id. Add the code (an
+  enum in `contracts/openapi`) beside the English rather than wording it per
+  language here; the client keeps the English for a code it does not know.
 - `internal/app` opens no transaction and calls no store queries: handlers
   call a domain service and map its errors. `TestAppLayerHoldsNoTransactionsOrQueries`
   (`tests/integration/layout`) fails on a transaction, SQL, a `store.Queries` or
@@ -277,8 +282,9 @@ Go service owning Human HTTP/SSE, Agent callbacks, and active product state.
   `LOCAL_MODEL_ACTION_UNCONFIRMED`: it may still act, and the snapshots show
   the outcome. The Computer's refusal codes map to `LocalModelsErrorCode` in
   `internal/app/handlers_local_models.go` (and `LOAD_NO_ROOM` / `MEMORY_INSUFFICIENT`
-  on model-source switches map to `LOCAL_MODEL_NO_ROOM` in
-  `internal/app/handlers_model_source.go`).
+  map to `LOCAL_MODEL_NO_ROOM` and `BYOK_GATEWAY_FAILED` maps to HTTP 502
+  `BYOK_GATEWAY_FAILED` with the Computer's diagnostic message and a `gateway`
+  detail entry in `internal/app/handlers_model_source.go`).
 - A Computer's model source lives on the Computer
   (`internal/app/handlers_model_source.go`); TeamHub never stores a BYOK key.
   A switch checks for running work, runs `apply` on the Computer, then moves

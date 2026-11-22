@@ -15,7 +15,7 @@ import { translate } from "@/i18n/language";
 import type { Message } from "@/i18n/messages";
 import { useT } from "@/i18n/use-translation";
 import { MeetingAudioPlayer } from "./meeting-audio-player";
-import { parseMeetingSummary } from "./meeting-overview";
+import { parseMeetingSummary, TODO_LIST_TITLE } from "./meeting-overview";
 import {
   MeetingKeywords,
   MeetingOutcomes,
@@ -23,6 +23,7 @@ import {
 } from "./meeting-overview-card";
 import { HideMeetingDialog } from "./hide-meeting-dialog";
 import { formatMeetingWhen, meetingWhen } from "./meetings-calendar";
+import { meetingsExtrasMessages } from "./meetings-extras.messages";
 import { meetingsMessages as m } from "./meetings.messages";
 
 const meetingSummaryHiddenSectionTitles = [
@@ -205,7 +206,11 @@ export function MeetingReader({
                       <MeetingOutcomes
                         key={index}
                         outcomes={block.outcomes}
-                        title={block.title}
+                        title={
+                          block.title === TODO_LIST_TITLE
+                            ? t(meetingsExtrasMessages.todoList)
+                            : block.title
+                        }
                       />
                     ),
                   )}

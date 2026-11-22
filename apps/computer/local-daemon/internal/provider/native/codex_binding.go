@@ -230,7 +230,9 @@ func (op *codexOperation) openThread(ctx context.Context) error {
 		hooks["PreToolUse"] = permission.CodexShellTextHooks(spec.ShellTextHook)
 	}
 	if hook := spec.CodexPermissionHook; hook != nil {
-		params["approvalPolicy"], params["approvalsReviewer"] = "untrusted", "user"
+		if hook.ReviewPermissions {
+			params["approvalPolicy"], params["approvalsReviewer"] = "untrusted", "user"
+		}
 		maps.Copy(hooks, hook.Config)
 	}
 	if len(hooks) > 0 {

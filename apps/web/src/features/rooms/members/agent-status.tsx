@@ -3,6 +3,10 @@ import { type Translate, translate } from "@/i18n/language";
 import { useT } from "@/i18n/use-translation";
 
 import { agentInfoMessages } from "./agent-info.messages";
+import {
+  availabilityLabel,
+  availabilitySummary,
+} from "./agent-availability-text";
 
 type AgentAvailability = TeamHubTenantAgentAvailabilitySnapshot["availability"];
 
@@ -21,7 +25,7 @@ function agentStatusDetail(
   return activeTaskCount > 0
     ? t(agentInfoMessages.tasksInProgress, { count: activeTaskCount })
     : availability.status !== "online"
-      ? availability.current_activity?.summary
+      ? availabilitySummary(availability, t)
       : undefined;
 }
 
@@ -50,9 +54,7 @@ export function AgentStatus({
 }) {
   const t = useT();
   const status = availability.status;
-  // Any other status shows the label TeamHub sent, in TeamHub's own words.
-  const label =
-    status === "online" ? t(agentInfoMessages.online) : availability.label;
+  const label = availabilityLabel(availability, t);
   const detail = agentStatusDetail(availability, t);
   return (
     <span className="inline-flex min-w-0 items-center gap-1.5">

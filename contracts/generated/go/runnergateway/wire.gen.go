@@ -2034,6 +2034,7 @@ func (AgentInput) RequiredFields() []string { return []string{"type", "text"} }
 type ContextRunContext struct {
 	HumanInteractions *bool    `json:"human_interactions,omitempty"`
 	PermissionReview  *bool    `json:"permission_review,omitempty"`
+	StopHook          *bool    `json:"stop_hook,omitempty"`
 	ResumeAfterYield  *bool    `json:"resume_after_yield,omitempty"`
 	ExecutionRunRef   string   `json:"execution_run_ref"`
 	SourceInboxIDs    []string `json:"source_inbox_ids"`
@@ -2152,6 +2153,7 @@ type OperationPrepare struct {
 	SessionOptions      SessionOptions            `json:"session_options"`
 	Session             json.RawMessage           `json:"session"`
 	PermissionReview    *bool                     `json:"permission_review,omitempty"`
+	StopHook            *bool                     `json:"stop_hook,omitempty"`
 	MCPRelays           []LocalMcpRelayDescriptor `json:"mcp_relays"`
 	Target              string                    `json:"target"`
 }
@@ -2418,6 +2420,7 @@ func (OperationPrepared) RequiredFields() []string {
 type ProviderPrepareRunContext struct {
 	HumanInteractions *bool `json:"human_interactions,omitempty"`
 	PermissionReview  *bool `json:"permission_review,omitempty"`
+	StopHook          *bool `json:"stop_hook,omitempty"`
 }
 
 // FixedFields lists the keys whose value the schema fixes for a ProviderPrepareRunContext.

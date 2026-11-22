@@ -8,6 +8,7 @@ import type {
 import { translate, type Translate } from "@/i18n/language";
 
 import { agentRuntimeMessages } from "./agent-runtime.messages";
+import { runtimeModelLabel } from "./runtime-model-label";
 import { reasoningEffortLabel } from "./use-agent-model-selection";
 
 export type LocalComputer = TeamHubLocalComputerPage["items"][number];
@@ -198,9 +199,13 @@ export function describeMoveTarget(
   const runtime = computer?.runtimes.find(
     (item) => item.type === target.runtimeType,
   );
-  const modelLabel =
-    runtime?.models.find((item) => item.id === target.model)?.label ??
-    target.model;
+  const modelLabel = runtimeModelLabel(
+    runtime?.models.find((item) => item.id === target.model) ?? {
+      id: target.model,
+      label: target.model,
+    },
+    t,
+  );
   const summary = [
     runtimeLabels[target.runtimeType],
     modelLabel,

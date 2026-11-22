@@ -496,6 +496,20 @@ export const createAgentManagerApplication = (
       ...(options.proactive ? { proactive: options.proactive } : {}),
       ...(options.taskProgress ? { taskProgress: options.taskProgress } : {}),
       ...(options.replyRhythm ? { replyRhythm: options.replyRhythm } : {}),
+      ...(stateBackend.kind === "teamhub"
+        ? {
+            roomReplyGuard: {
+              hasRunReplied: async (contextKey, runId, signal) =>
+                (
+                  await stateBackend.client.getRunReplyStatus(
+                    contextKey,
+                    runId,
+                    signal,
+                  )
+                ).replied,
+            },
+          }
+        : {}),
       ...(agentMemoryServices
         ? { agentMemory: agentMemoryServices.featureDeps }
         : {}),

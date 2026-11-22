@@ -482,6 +482,10 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 4096
+                method:
+                  type: string
+                  enum: [browser, device]
+                  description: Codex only. browser runs the localhost-callback login, finished in a browser on this computer; on Linux the runtime does not open its link, which is left to the caller, and elsewhere it opens the page itself. device runs the device-code login, finished in any browser. Defaults to browser on macOS and Windows and device elsewhere, with the runtime opening its own page.
       responses:
         "200":
           description: Owner-only ephemeral authentication state
@@ -1059,6 +1063,10 @@ components:
           type: boolean
         message:
           type: string
+        reason:
+          type: string
+          enum: [unavailable, timed_out, ended]
+          description: Why a failed sign-in ended. unavailable - this runtime has no native sign-in; timed_out - nobody finished it in time; ended - the login process stopped without a sign-in.
     InstallationJob:
       type: object
       additionalProperties: false
@@ -1118,6 +1126,10 @@ components:
         localModelsPlan:
           $ref: "#/components/schemas/LocalModelsPlan"
         errorCode: *a1
+        errorReasons:
+          type: array
+          items: *a1
+          description: Structured upstream reason codes explaining why a local model binding or setup step is not ready.
         cancelRequested: *a6
     InstallationEvent:
       type: object

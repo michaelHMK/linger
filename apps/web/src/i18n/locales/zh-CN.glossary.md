@@ -9,19 +9,18 @@ Product names and the concepts people see in commands, logs and documentation
 keep their English form, so the interface matches what a Human types and reads
 elsewhere.
 
-| Term                                 | Note                                                |
-| ------------------------------------ | --------------------------------------------------- |
-| Linger, TeamHub                      | Product names.                                      |
-| Agent, Room, Runtime, Skill, Routine | Product concepts.                                   |
-| Another Me, Wiki                     | Feature names.                                      |
-| CLI, PowerShell, npm, Node.js        | Tools.                                              |
-| Claude Code, Codex, Pi, Antigravity  | App names.                                          |
-| API, URL, BYOK, PDF, Markdown        | Abbreviations and formats.                          |
-| Base URL, tokens, Dense, MoE         | Model terms people meet in provider documentation.  |
-| Local Computer                       | Only when it names the background program.          |
-| Reconnect This Computer              | A desktop menu item, quoted until it is translated. |
-| Read All, Write All                  | Permission names in Composio's dashboard.           |
-| Issue                                | Linear's word for a work item.                      |
+| Term                                 | Note                                               |
+| ------------------------------------ | -------------------------------------------------- |
+| Linger, TeamHub                      | Product names.                                     |
+| Agent, Room, Runtime, Skill, Routine | Product concepts.                                  |
+| Another Me, Wiki                     | Feature names.                                     |
+| CLI, PowerShell, npm, Node.js        | Tools.                                             |
+| Claude Code, Codex, Pi, Antigravity  | App names.                                         |
+| API, URL, BYOK, PDF, Markdown        | Abbreviations and formats.                         |
+| Base URL, tokens, Dense, MoE         | Model terms people meet in provider documentation. |
+| Local Computer                       | Only when it names the background program.         |
+| Read All, Write All                  | Permission names in Composio's dashboard.          |
+| Issue                                | Linear's word for a work item.                     |
 
 ## Translated
 
@@ -175,6 +174,7 @@ elsewhere.
 | Daily / Weekly report         | 日报 / 周报                |                                                   |
 | Highlights / Next             | 要点 / 接下来              | Sections of a report card.                        |
 | Personal Knowledge Graph      | 个人知识图谱               | The Wiki's graph of pages.                        |
+| Personal Wiki                 | 个人 Wiki                  | Where a Document is visible.                      |
 | Session (a Wiki page)         | 会话记录                   | Not `会话`, which is the browser session.         |
 | Playhead (of the Timeline)    | 游标                       | The marker a day or week rests under.             |
 | Email (an address)            | 邮箱                       | `邮件` is a message that is sent.                 |
@@ -193,6 +193,54 @@ elsewhere.
 | Snapshot / Share link         | 快照 / 分享链接            |                                                   |
 | Revoke                        | 撤销                       | Withdraws a share link.                           |
 | Yours                         | 你的                       | The tag on an Agent you created.                  |
+| Reconnect This Computer       | 重新连接这台电脑           | A desktop menu item; quote it as shown.           |
+| Diagnostics                   | 诊断信息                   | Logs and settings sent to support.                |
+| Prevent Sleep                 | 防止休眠                   | A desktop setting.                                |
+| Menu bar / System tray        | 菜单栏 / 系统托盘          | Where the desktop app lives.                      |
+| Comment                       | 评论                       |                                                   |
+| Collaborator                  | 协作者                     | A person editing the same Document.               |
+| Share (a Document)            | 分享                       |                                                   |
+| Page history / Checkpoint     | 页面历史 / 版本            | A saved point in a Document's history.            |
+| Edit mode / Read mode         | 编辑模式 / 阅读模式        |                                                   |
+| Link access                   | 链接权限                   | Who can open a Document's share link.             |
+| Can view / Can edit           | 可查看 / 可编辑            |                                                   |
+| Reset link                    | 重置链接                   |                                                   |
+| Recovery copy                 | 恢复副本                   |                                                   |
+| Document Asset                | 文档资源                   | A file stored with a Document.                    |
+| Canvas                        | 画布                       |                                                   |
+| Full screen                   | 全屏                       |                                                   |
+| Basic preview                 | 基础预览                   | A file shown without its own renderer.            |
+| Media type                    | 媒体类型                   |                                                   |
+| Integrity verification        | 完整性校验                 | Checking a downloaded file.                       |
+| Sandbox / Renderer            | 沙盒 / 渲染器              |                                                   |
+| Workbook / Sheet / Cell       | 工作簿 / 工作表 / 单元格   |                                                   |
+| Zoom in / Zoom out / Reset    | 放大 / 缩小 / 重置缩放     |                                                   |
+| Fit (a diagram)               | 适应窗口                   |                                                   |
+| Diagram                       | 图表                       | A Mermaid diagram.                                |
+| Drafting                      | 正在起草                   |                                                   |
+| Original file                 | 原文件                     |                                                   |
+| Float (a window)              | 悬浮                       | The floating Voice Mode window.                   |
+| Live voice                    | 实时语音                   |                                                   |
+| Speaker                       | 发言人                     |                                                   |
+| ASR provider                  | ASR 服务商                 | `语音服务商` is the Voice provider.               |
+| Selection (for Voice Mode)    | 选中内容                   | Text a person points Voice Mode at.               |
+| Voice materials               | 语音材料                   | What a person gives Voice Mode to read.           |
+| Recording target              | 录音对象                   |                                                   |
+| Hardware voice focus          | 录音区域                   | The part of the page a voice device records.      |
+| Work Item                     | 工作项                     |                                                   |
+| Tenant                        | 工作区                     | The same as Workspace.                            |
+| Todo                          | 待办                       |                                                   |
+| Assignees                     | 负责人                     |                                                   |
+| Priority                      | 优先级                     |                                                   |
+| Execution / Attempt N         | 执行 / 第 N 次尝试         |                                                   |
+| Idle / Working                | 空闲 / 工作中              | An Agent's state.                                 |
+| Interrupted / Ended           | 已中断 / 已结束            | A run's state.                                    |
+| Live activities               | 实时活动                   |                                                   |
+| Input / Output / Changes      | 输入 / 输出 / 改动         | Sections of a run step.                           |
+| Tool call                     | 工具调用                   |                                                   |
+| Unknown Actor                 | 未知成员                   | An avatar with no known person.                   |
+| To-do list                    | 待办事项                   | A section of a meeting summary.                   |
+| Hue / Saturation / Brightness | 色相 / 饱和度 / 亮度       |                                                   |
 
 ## Style
 

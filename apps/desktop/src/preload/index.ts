@@ -72,6 +72,9 @@ const api: LingerDesktopApi = {
   voiceWindow: {
     showMainWindow: () => ipcRenderer.invoke(IPC.voiceWindowShowMain),
   },
+  language: {
+    set: (language) => ipcRenderer.invoke(IPC.languageSet, language),
+  },
   ...(process.platform === "darwin"
     ? {
         permissions: {

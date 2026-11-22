@@ -4,6 +4,7 @@ import "./room-document-blocknote.css";
 import "@/components/knowledge-document.css";
 
 import { CommentsExtension } from "@blocknote/core/comments";
+import { zh } from "@blocknote/core/locales";
 import { BlockNoteView } from "@blocknote/mantine";
 import {
   FilePanel,
@@ -28,6 +29,8 @@ import {
 import { useNavigate } from "react-router";
 
 import { teamHubData } from "@/features/teamhub/teamhub-api";
+import { translate } from "@/i18n/language";
+import { useT, useTranslation } from "@/i18n/use-translation";
 import type { TeamHubClient } from "@/features/teamhub/teamhub-client";
 import { collectTeamHubCursorPages } from "@/features/teamhub/teamhub-cursor-pages";
 import { roomMembersQueryOptions } from "../room-queries";
@@ -89,6 +92,8 @@ import {
 import { CanvasMailAttachments } from "./canvas/canvas-mail-attachments";
 import { CanvasMailSentSync } from "./canvas/canvas-mail-send";
 import { CanvasMailSender } from "./canvas/canvas-mail-sender";
+import { documentCommentsMessages } from "./document-comments.messages";
+import { documentEditorMessages as m } from "./document-editor.messages";
 
 const ignoreCommentsOpenChange = () => undefined;
 
@@ -140,6 +145,7 @@ export function RoomDocumentBlockNoteEditor({
   session,
   tenantId,
 }: RoomDocumentBlockNoteEditorProps) {
+  const { language, t } = useTranslation();
   const navigate = useNavigate();
   const openDocument = (path: string) => {
     void navigate(path);
@@ -319,6 +325,8 @@ export function RoomDocumentBlockNoteEditor({
         showCursorLabels: "always",
         user: session.user,
       },
+      // BlockNote's own menus and placeholders; English is its default.
+      ...(language === "zh-CN" ? { dictionary: zh } : {}),
       extensions: [comments],
       pasteHandler: ({ defaultPasteHandler, editor: target, event }) =>
         pasteRoomDocumentRichHtml(target, event.clipboardData) ||
@@ -348,6 +356,7 @@ export function RoomDocumentBlockNoteEditor({
       documentId,
       imagePreviewStore,
       editable,
+      language,
       session,
     ],
   );
@@ -392,7 +401,7 @@ export function RoomDocumentBlockNoteEditor({
   return (
     <section
       ref={editorRootRef}
-      aria-label="Room Document editor"
+      aria-label={t(m.editor)}
       className="room-document-blocknote relative min-h-[420px]"
       data-editable={String(editable)}
       data-canvas-target={canvasTarget}
@@ -526,7 +535,7 @@ export function RoomDocumentBlockNoteEditor({
           composer={
             readOnlyCommentPending ? (
               <DocumentMentionMessageComposer
-                ariaLabel="New selection comment"
+                ariaLabel={t(documentCommentsMessages.newSelectionComment)}
                 // eslint-disable-next-line jsx-a11y/no-autofocus -- the field is focused on purpose because the user just opened this dialog or inline editor
                 autoFocus
                 mentionOptions={mentionOptions}
@@ -770,6 +779,7 @@ function lastCodePoints(value: string, limit: number): string {
 }
 
 function RoomDocumentFilePanel({ blockId }: FilePanelProps) {
+  const t = useT();
   const editor = useBlockNoteEditor();
   const components = useComponentsContext();
   const uploading = useRef(false);
@@ -801,15 +811,11 @@ function RoomDocumentFilePanel({ blockId }: FilePanelProps) {
             : result,
         );
       } catch {
-        setUploadFailure(
-          "The file was uploaded, but the Document block could not be updated. Try inserting it again.",
-        );
+        setUploadFailure(translate(m.blockUpdateFailed));
       }
     } catch (error) {
       setUploadFailure(
-        error instanceof Error
-          ? error.message
-          : "Document Asset upload failed.",
+        error instanceof Error ? error.message : translate(m.uploadFailed),
       );
     } finally {
       uploading.current = false;
@@ -820,7 +826,7 @@ function RoomDocumentFilePanel({ blockId }: FilePanelProps) {
       blockId={blockId}
       tabs={[
         {
-          name: "Upload",
+          name: t(m.upload),
           tabPanel: (
             <components.FilePanel.TabPanel className="bn-tab-panel">
               <components.FilePanel.FileInput
@@ -828,7 +834,7 @@ function RoomDocumentFilePanel({ blockId }: FilePanelProps) {
                 className="bn-file-input"
                 data-test="upload-input"
                 onChange={(file) => void upload(file)}
-                placeholder="Choose a file"
+                placeholder={t(m.chooseFile)}
                 value={null}
               />
               {uploadFailure ? (

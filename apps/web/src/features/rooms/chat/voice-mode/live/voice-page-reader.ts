@@ -4,7 +4,8 @@
  * the numbered visible content is read when it asks or after a command.
  */
 
-const voiceWindow = '[aria-label="Voice Mode window"]';
+import { voiceWindowSelector as voiceWindow } from "../voice-window-selector";
+
 const outsideContent = `${voiceWindow}, [data-voice-area], aside[aria-label$=" sidebar"], [aria-hidden="true"], [inert]`;
 // The Human's unsent draft and secrets are never read.
 const privateInput = `input, textarea, select, [data-chat-composer]`;

@@ -10,8 +10,11 @@ import path from "node:path";
 import os from "node:os";
 import { afterEach, expect, test, vi } from "vitest";
 import {
+  localModelsDegradedFromError,
+  localModelsDegradedFromOutcome,
   prepareLocalModels,
   localModelsEnvironment,
+  reasonCodeList,
   restoreLocalModels,
   stackProgress,
   withLocalModelsLock,
@@ -387,7 +390,7 @@ test("a failed re-apply of the approved plan reports the upstream cause", async 
   });
 });
 test("a not-ready binding is never re-applied once resource choices changed", async () => {
-  const f = await deployedThenNotReady("deployment-unavailable");
+  const f = await deployedThenNotReady("binding-unavailable");
   const result = await prepareLocalModels(
     f.instance,
     { ...f.options, shareGpu: false },
@@ -396,6 +399,8 @@ test("a not-ready binding is never re-applied once resource choices changed", as
   expect(result).toMatchObject({
     details: { code: "LOCAL_MODELS_RECOVERY_REQUIRED" },
   });
+  // Resource-choice changes require replanning and must not carry stale binding reasons.
+  expect(result?.details).not.toHaveProperty("reasons");
   expect(
     f.call.mock.calls.some(
       ([, args]) => args[0] === "stack" && ["plan", "apply"].includes(args[1]!),
@@ -1019,4 +1024,33 @@ test("names what downloads and keeps the tool's counters", () => {
     { ...progress, event: "log" },
   ])
     expect(stackProgress(other)).toBeUndefined();
+});
+
+test("extracts degraded local model details with valid reason codes only", () => {
+  expect(
+    localModelsDegradedFromOutcome({
+      code: 4,
+      state: "action_required",
+      message: "The upstream tool could not verify the local stack binding.",
+      details: {
+        code: "LOCAL_MODELS_RECOVERY_REQUIRED",
+        reasons: ["binding-unavailable", "INVALID REASON", 123],
+      },
+    }),
+  ).toEqual({
+    code: "LOCAL_MODELS_RECOVERY_REQUIRED",
+    message: "The upstream tool could not verify the local stack binding.",
+    reasons: ["binding-unavailable"],
+  });
+  expect(
+    reasonCodeList(["binding-unavailable", "INVALID", 42, "plan-invalid"]),
+  ).toEqual(["binding-unavailable", "plan-invalid"]);
+  expect(
+    localModelsDegradedFromError(
+      new Error("Invalid upstream local model binding."),
+    ),
+  ).toEqual({
+    code: "LOCAL_MODELS_RECOVERY_REQUIRED",
+    message: "Invalid upstream local model binding.",
+  });
 });

@@ -237,7 +237,7 @@ function MailCardFooter({
     return (
       <CardDone
         icon={Loading03Icon}
-        text={progressLabel[status ?? "queued"] ?? t(chatMessages.emailSending)}
+        text={t(progressLabel[status ?? "queued"] ?? chatMessages.emailSending)}
         tone="muted"
       />
     );

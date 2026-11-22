@@ -50,7 +50,49 @@ describe("AgentStatus", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the label TeamHub sent for any other status as it is", async () => {
+  it("words the status and its detail from the reason TeamHub sends", async () => {
+    await setLanguage("zh-CN");
+    render(
+      <AgentStatus
+        availability={{
+          status: "offline",
+          label: "Offline",
+          reason: "waiting_for_computer",
+          active_task_count: 0,
+          current_activity: { summary: "Waiting for the computer to connect" },
+        }}
+        showDetails
+      />,
+    );
+    expect(
+      screen.getByText(zhCN.agentAvailability.offline),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(zhCN.agentAvailability.waitingForComputer)),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the Runtime's own diagnostic beside a worded label", async () => {
+    await setLanguage("zh-CN");
+    render(
+      <AgentStatus
+        availability={{
+          status: "error",
+          label: "Needs attention",
+          reason: "runtime_error",
+          active_task_count: 0,
+          current_activity: { summary: "codex exited with status 2" },
+        }}
+        showDetails
+      />,
+    );
+    expect(
+      screen.getByText(zhCN.agentAvailability.needsAttention),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/codex exited with status 2/)).toBeInTheDocument();
+  });
+
+  it("shows TeamHub's English label when there is no reason", async () => {
     await setLanguage("zh-CN");
     render(
       <AgentStatus
@@ -62,5 +104,24 @@ describe("AgentStatus", () => {
       />,
     );
     expect(screen.getByText("Status unavailable")).toBeInTheDocument();
+  });
+
+  it("falls back to TeamHub's English for a reason it does not know", async () => {
+    await setLanguage("zh-CN");
+    render(
+      <AgentStatus
+        availability={{
+          status: "offline",
+          label: "Paused by admin",
+          // A reason added to TeamHub after this client was built.
+          reason: "paused_by_admin" as never,
+          active_task_count: 0,
+          current_activity: { summary: "An admin paused this Agent" },
+        }}
+        showDetails
+      />,
+    );
+    expect(screen.getByText("Paused by admin")).toBeInTheDocument();
+    expect(screen.getByText(/An admin paused this Agent/)).toBeInTheDocument();
   });
 });

@@ -27,6 +27,9 @@ import { createPortal } from "react-dom";
 import { useMatch, useNavigate } from "react-router";
 
 import { Button } from "@/components/ui/button";
+import { commonMessages } from "@/i18n/common.messages";
+import { translate } from "@/i18n/language";
+import { useT } from "@/i18n/use-translation";
 import { isRunWorking } from "@/features/teamhub/run-status";
 import { useTeamHubRuntime } from "@/features/teamhub/teamhub-runtime";
 import type { TeamHubMessage } from "@/features/teamhub/teamhub-types";
@@ -55,6 +58,7 @@ import {
   type VoiceWindowBounds,
 } from "./voice-window-resize";
 import { showVoiceNotice, useVoiceNotice } from "./voice-notice";
+import { voiceWindowMessages as m } from "./voice-window.messages";
 import {
   useOptionalVoiceModeSession,
   useVoiceModeLevel,
@@ -132,6 +136,7 @@ function MiniWindow({
   onSoundOff: (soundOff: boolean) => void;
   session: VoiceModeSession;
 }) {
+  const t = useT();
   const { client } = useTeamHubRuntime();
   const navigate = useNavigate();
   const { roomId, roomName, tenantId } = session.target;
@@ -236,8 +241,7 @@ function MiniWindow({
       if (action === "mute" || action === "unmute")
         void onMute(action === "mute");
       // The desktop places a picture-in-picture window; only a drag moves it.
-      else if (pip)
-        showVoiceNotice("Drag the floating window to move or resize it.");
+      else if (pip) showVoiceNotice(translate(m.dragHint));
       else if (action === "expand" || action === "shrink")
         choosePreset(action === "expand" ? "expanded" : "compact");
       else place(action === "move_left" ? "left" : "right");
@@ -263,7 +267,7 @@ function MiniWindow({
   if (leavingPip) return null;
   return createPortal(
     <section
-      aria-label="Voice Mode window"
+      aria-label={t(m.window)}
       className={
         pip
           ? "flex h-dvh w-full flex-col bg-app-canvas"
@@ -276,6 +280,8 @@ function MiniWindow({
       }
       data-pip={pip ? true : undefined}
       data-size={resized ? "custom" : size}
+      // Voice Mode finds its own window by this, whatever the language.
+      data-voice-window=""
       ref={frameRef}
       style={
         pip
@@ -293,7 +299,7 @@ function MiniWindow({
             className="voice-window-title flex h-9 shrink-0 cursor-grab touch-none select-none items-center px-3 active:cursor-grabbing"
             {...dragHandlers}
           >
-            Voice Mode
+            {t(m.title)}
           </div>
         )}
         <header
@@ -318,14 +324,14 @@ function MiniWindow({
               if (!consumeDrag())
                 void navigate(`/t/${tenantId}/rooms/${roomId}/chat`);
             }}
-            title="Open this conversation"
+            title={t(m.openConversation)}
             type="button"
           >
             <span className="block truncate text-[14px] font-medium leading-5 text-app-ink">
-              {roomName || "Voice Mode"}
+              {roomName || t(m.title)}
             </span>
             <span className="block truncate text-[12px] leading-4 text-app-muted">
-              {voiceModeStatusLabel({ ...state, entered: session.entered })}
+              {voiceModeStatusLabel({ ...state, entered: session.entered }, t)}
             </span>
           </button>
           <span
@@ -336,7 +342,7 @@ function MiniWindow({
               <Button
                 // Names differ from the Room composer's controls so both can
                 // be on screen without two identically named buttons.
-                aria-label="Retry voice message from the voice window"
+                aria-label={t(m.retry)}
                 disabled={state.sending}
                 onClick={onRetry}
                 size="compactIcon"
@@ -346,7 +352,7 @@ function MiniWindow({
               </Button>
             ) : null}
             <Button
-              aria-label={muted ? "Unmute Voice Mode" : "Mute Voice Mode"}
+              aria-label={t(muted ? m.unmute : m.mute)}
               aria-pressed={muted}
               disabled={!state.microphoneActive}
               onClick={() => void onMute(!muted)}
@@ -361,11 +367,7 @@ function MiniWindow({
             </Button>
             {soundOff === undefined ? null : (
               <Button
-                aria-label={
-                  soundOff
-                    ? "Turn reply sound on from the voice window"
-                    : "Turn reply sound off from the voice window"
-                }
+                aria-label={t(soundOff ? m.replySoundOn : m.replySoundOff)}
                 aria-pressed={soundOff}
                 onClick={() => onSoundOff(!soundOff)}
                 size="compactIcon"
@@ -382,10 +384,10 @@ function MiniWindow({
               the desktop app's main window or this browser tab. */}
             {pip ? (
               <Button
-                aria-label="Return Voice Mode to Linger"
+                aria-label={t(m.returnToLinger)}
                 onClick={() => returnVoicePipToPage("voice-mode")}
                 size="compactIcon"
-                title="Back to Linger; Voice Mode continues"
+                title={t(m.returnHint)}
                 tone="ghost"
               >
                 <Icon icon={PictureInPictureExitIcon} size={16} />
@@ -395,10 +397,10 @@ function MiniWindow({
               opens that window only from a click in the page. */}
             {pip || !voicePipSupported() ? null : (
               <Button
-                aria-label="Float Voice Mode window"
+                aria-label={t(m.float)}
                 onClick={() => void openVoicePip("voice-mode")}
                 size="compactIcon"
-                title="Float over other tabs and apps"
+                title={t(m.floatHint)}
                 tone="ghost"
               >
                 <Icon icon={PictureInPictureOnIcon} size={16} />
@@ -406,11 +408,7 @@ function MiniWindow({
             )}
             {pip ? null : (
               <Button
-                aria-label={
-                  large
-                    ? "Shrink Voice Mode window"
-                    : "Expand Voice Mode window"
-                }
+                aria-label={t(large ? m.shrink : m.expand)}
                 onClick={() => choosePreset(large ? "compact" : "expanded")}
                 size="compactIcon"
                 tone="ghost"
@@ -424,8 +422,10 @@ function MiniWindow({
             )}
             {/* The floating window's own close button ends Voice Mode there. */}
             {pip ? null : (
+              // Not marked risky: ending Voice Mode from its window is never
+              // confirmed, as its English name never was.
               <Button
-                aria-label="End Voice Mode"
+                aria-label={t(m.end)}
                 onClick={onExit}
                 size="compactIcon"
                 tone="ghost"
@@ -436,7 +436,7 @@ function MiniWindow({
           </span>
         </header>
         <div
-          aria-label="Voice Mode conversation"
+          aria-label={t(m.conversation)}
           aria-live="polite"
           className="workspace-scrollbar min-h-24 flex-1 space-y-2 overflow-y-auto px-3 py-3"
           onScroll={(event) => {
@@ -451,7 +451,7 @@ function MiniWindow({
           {(transcript ? transcript.length : turns.length || replying.length) ||
           live ? null : (
             <p className="py-4 text-center text-xs text-app-muted">
-              Start speaking. Your words and replies appear here.
+              {t(m.empty)}
             </p>
           )}
           {transcript ? (
@@ -460,8 +460,8 @@ function MiniWindow({
                 agent={line.speaker !== "you"}
                 author={
                   line.speaker === "you"
-                    ? "You"
-                    : session.target.recipient?.display_name || "Reply"
+                    ? t(commonMessages.you)
+                    : session.target.recipient?.display_name || t(m.reply)
                 }
                 key={line.id}
                 own={line.speaker === "you"}
@@ -491,13 +491,22 @@ function MiniWindow({
                   key={run.id}
                   own={false}
                   pending
-                  text="Working…"
+                  text={t(m.working)}
                 />
               ))}
-              {heard ? <Bubble author="You" own pending text={heard} /> : null}
+              {heard ? (
+                <Bubble
+                  author={t(commonMessages.you)}
+                  own
+                  pending
+                  text={heard}
+                />
+              ) : null}
             </>
           )}
-          {saying ? <Bubble author="You" own pending text={saying} /> : null}
+          {saying ? (
+            <Bubble author={t(commonMessages.you)} own pending text={saying} />
+          ) : null}
         </div>
         {notice ? (
           <p
@@ -509,15 +518,14 @@ function MiniWindow({
         ) : null}
         {pendingMaterials ? (
           <p className="shrink-0 truncate border-t border-app-border px-3 py-1.5 text-[12px] text-app-muted">
-            Next turn includes {pendingMaterials} selection
-            {pendingMaterials === 1 ? "" : "s"}
+            {t(m.pendingSelections, { count: pendingMaterials })}
           </p>
         ) : null}
       </div>
       {pip ? null : (
         <VoiceWindowResizeHandles
           bounds={viewportBounds}
-          label="Resize Voice Mode window"
+          label={t(m.resize)}
           min={minWindowSize}
           onResize={({ left, top, ...next }) => {
             setResized(next);

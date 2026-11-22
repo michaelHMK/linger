@@ -34,6 +34,7 @@ import {
   CardRowDetails,
   DecisionActions,
 } from "./approval-card-parts";
+import { decisionCardHeading } from "./card-prompts";
 import { CardBox, CardDone, type ReceiptTone } from "./card-shell";
 import { cardsMessages } from "./cards.messages";
 import { ConnectedAppIcon } from "./connected-app-identity";
@@ -249,7 +250,10 @@ function ApprovalDecision({
 
   return (
     <>
-      <CardBox heading={email ? undefined : card.title} label={label}>
+      <CardBox
+        heading={email ? undefined : decisionCardHeading(card, t)}
+        label={label}
+      >
         {email ? (
           <EmailDecisionView account={write?.account ?? ""} message={email} />
         ) : (

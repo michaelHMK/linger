@@ -27,6 +27,9 @@ type ProviderInstallation struct {
 	// ContextWindows maps a model ID to its discovered context length in
 	// tokens.
 	ContextWindows map[string]int
+	// DefaultModel is the model the Runtime's catalog marks as its default
+	// for the signed-in account; empty when it marks none.
+	DefaultModel string
 	// ModelGateway marks a Runtime whose model is served through the
 	// localmodels gateway (local models or BYOK). Those models have no
 	// provider-hosted web search, so the Runtime's own web tools stay off and
@@ -210,6 +213,7 @@ func (r ExecutionResolver) Resolve(ctx context.Context, command protocol.Command
 		ResumeAfterYield:  request.RunContext.ResumeAfterYield,
 		HumanInteractions: request.RunContext.HumanInteractions,
 		PermissionReview:  request.RunContext.PermissionReview,
+		StopHook:          request.RunContext.StopHook,
 		TeamHubCLIBin:     r.TeamHubCLIBin,
 		ThinkingLevel:     request.Runtime.ReasoningEffort,
 		ContextWindow:     installation.ContextWindows[request.Runtime.Model],
@@ -419,6 +423,7 @@ type semanticRequest struct {
 		ResumeAfterYield  bool   `json:"resume_after_yield,omitempty"`
 		HumanInteractions bool   `json:"human_interactions,omitempty"`
 		PermissionReview  bool   `json:"permission_review,omitempty"`
+		StopHook          bool   `json:"stop_hook,omitempty"`
 	} `json:"run_context,omitempty"`
 }
 

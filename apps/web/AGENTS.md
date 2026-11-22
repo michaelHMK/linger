@@ -38,7 +38,10 @@ build:assets` to check the initial JS budget.
   edits while offline). BYOK addresses requests as base URL + path + endpoint
   and sends the format the address's ending names (else the Runtime's own);
   it lists models only on request and shows a Test result as a floating
-  message, with the Computer's own message for endpoint refusals. A switch
+  message, with the Computer's own message for endpoint refusals; switch
+  failures also surface the Computer's diagnostic detail for
+  `BYOK_GATEWAY_FAILED` (from the `gateway` detail entry) and BYOK endpoint
+  refusals. A switch
   refused with `AGENT_HAS_ACTIVE_RUNS` retries with `force_terminate` only
   after the owner confirms. The Local model
   tab is one Computer's model library as TeamHub last stored it. The Computer
@@ -48,7 +51,12 @@ build:assets` to check the initial JS budget.
   memory or unified memory is constrained), shows an explicit `Memory guidance`
   banner and `Recheck memory` button (`POST .../local-models`), lets owners
   pick among installed local models in `SwitchToLocalNotice` or click
-  `Use for Agents` on a loaded row, renders tinted family icon tiles, Agent
+  `Use for Agents` on a loaded row, highlights Thinking Machines' Inkling 2
+  Mini in a featured spotlight frame (`featured-model-spotlight.tsx`) wrapping
+  the matching `ModelRow` so status and actions stay in one place (matched via
+  `@linger/service-kit/featured-models`, degrading to a partner highlight with
+  external links when absent from the catalog),
+  renders tinted family icon tiles, Agent
   usage counts, structured capability/parameter badges (never matched against
   `name` or `description`), state-distinct cards (`loaded`, `recommended`,
   `failed` with short failure reasons and direct `Remove` for damaged/missing
@@ -59,8 +67,13 @@ build:assets` to check the initial JS budget.
   `local-model-agents.ts` (`Use with <Another Me>`, `Open chat`,
   `Switch Agent…` in `Used by`, and `Make room` automatic Agent handoff once
   the replacement model loads when `Pi` is ready), and maps every code and enum
-  label to English in `local-models-copy.ts`. Without `?computer=` the desktop
-  app opens its own Computer and a browser prefers an online Computer. Only the
+  label to English in `local-models-copy.ts`. Without `?computer=` the page
+  reopens the last owned Computer chosen in this browser
+  (`last-models-computer.ts`, cleared on logout), else the desktop app opens its
+  own Computer and a browser prefers an online Computer. The header
+  `ComputerPicker` (`computer-picker.tsx`) shows connection dots and orders
+  online Computers first, and once more than 10 Computers exist it adds
+  in-popover search plus `All` / `Online` / `Offline` status filtering. Only the
   Computer's owner can act; actions return at once and progress arrives as
   `local-models` invalidation hints (while `directory` hints and model-source
   switches keep `Used by` and Agent registrations synchronized). From the click
@@ -75,9 +88,13 @@ build:assets` to check the initial JS budget.
   cannot fit only when it needs more than the pool's total. A Computer's detail
   on the Computers page links here and reads no model state itself.
 - `src/i18n`: the interface languages (English and Simplified Chinese).
-  `messages.ts` is the React-free core, `language.ts` holds the language on
-  screen and the stored choice, `use-translation.tsx` is the React side, and
-  `locales/` holds one catalog per translated language plus its glossary.
+  `messages.ts` re-exports the React-free core from
+  `@linger/service-kit/messages`, which the desktop shell shares,
+  `language.ts` holds the language on screen and the stored choice,
+  `desktop-language.ts` reports a stored choice to the desktop app so its
+  menus and pages follow, `use-translation.tsx` is the React side, and
+  `locales/` holds one catalog per translated language plus its glossary,
+  which the desktop catalog follows too.
 - `src/test`: unit-test support, including the in-process TeamHub test server.
 - `e2e`: Playwright product workflows; every spec runs on the real TeamHub and
   Document Runtime stack (`make check-e2e-room-document`).
@@ -280,8 +297,22 @@ build:assets` to check the initial JS budget.
     stored as a reason or a key and worded when it is shown, so it follows a
     language switch and a reload. `pending-message-failure.ts` is the pattern:
     the Outbox stores `failure.reason`, the hook words it with `t`.
-  - Names and text that come from TeamHub or from people (Agent names, message
-    previews, server error messages) are data and are shown as they are.
+  - Names and text that people or Agents wrote (Agent names, message
+    previews, a published template) are data and are shown as they are.
+  - TeamHub's own English is worded here from what it means, never translated
+    on the server: a status from its stable code
+    (`agent-availability-text.ts`), a card's ask from its kind and fields
+    (`card-prompts.ts`). A code or kind this client does not know shows
+    TeamHub's English.
+  - Errors are worded from the code only when TeamHub's message says nothing
+    more (`teamhub-error-text.ts`: expired sign-in, rate limit, server error,
+    a response without a TeamHub body). `FORBIDDEN`, `CONFLICT`, `NOT_FOUND`,
+    `INVALID_REQUEST` and the like keep TeamHub's message, which says what to
+    do; a case worth its own wording needs its own code from TeamHub.
+  - Fixed catalog text (`web-search-backend-text.ts`, `app-groups.ts`,
+    `builtin-template-text.ts`, `runtime-model-label.ts`) keeps a copy by id
+    for other languages only, through `teamHubCatalogText`: English shows
+    TeamHub's text, so a change on the server shows at once.
   - Add a language: add it to `LANGUAGES` and `catalogLoaders` in
     `src/i18n/language.ts` and add `src/i18n/locales/<tag>.json`. Catalogs
     load on demand, so English users download none.

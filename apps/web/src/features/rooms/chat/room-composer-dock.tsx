@@ -7,6 +7,7 @@ import type { PropsWithChildren } from "react";
 import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/features/local-computer/computer-row";
 import { LocalRuntimeAuthenticationGuidance } from "@/features/local-computer/local-runtime-authentication-guidance";
+import { localRuntimeMessage } from "@/features/local-computer/local-runtime-message";
 import type {
   TeamHubRoom,
   TeamHubTenantAgent,
@@ -187,8 +188,13 @@ function LocalRuntimeAttentionNotice({
           computerName={status.display_name}
         />
       ) : (
-        <p className="mt-1 text-app-muted">
-          {status.message ?? t(composerMessages.checkLocalRuntime)}
+        <p className="mt-1 text-app-muted" title={status.message}>
+          {localRuntimeMessage(
+            status,
+            status.runtime_type,
+            status.display_name,
+            t,
+          ) ?? t(composerMessages.checkLocalRuntime)}
         </p>
       )}
       <p className="mt-1 text-app-muted">

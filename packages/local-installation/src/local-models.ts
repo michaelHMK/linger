@@ -38,6 +38,47 @@ export interface LocalModelsPlanSummary {
   components: string[];
   warnings: string[];
 }
+export interface LocalModelsDegraded {
+  code: string;
+  message: string;
+  reasons?: string[];
+}
+const REASON_CODE = /^[a-z][a-z0-9-]{0,63}$/;
+export function reasonCodeList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter(
+        (item): item is string =>
+          typeof item === "string" && REASON_CODE.test(item),
+      )
+    : [];
+}
+export function localModelsDegradedFromOutcome(
+  outcome: InstallOutcome,
+): LocalModelsDegraded {
+  const details =
+    outcome.details && typeof outcome.details === "object"
+      ? (outcome.details as { code?: unknown; reasons?: unknown })
+      : undefined;
+  const code =
+    typeof details?.code === "string" && details.code.trim()
+      ? details.code.trim()
+      : "LOCAL_MODELS_RECOVERY_REQUIRED";
+  const reasons = reasonCodeList(details?.reasons);
+  return {
+    code,
+    message: outcome.message || "The local model stack is not ready.",
+    ...(reasons.length ? { reasons } : {}),
+  };
+}
+export function localModelsDegradedFromError(
+  error: unknown,
+): LocalModelsDegraded {
+  const message =
+    error instanceof Error && error.message.trim()
+      ? error.message.trim()
+      : "The local model stack is not ready.";
+  return { code: "LOCAL_MODELS_RECOVERY_REQUIRED", message };
+}
 interface Binding {
   schema: "localmodels.stack-binding/v1";
   ready: boolean;
@@ -218,11 +259,8 @@ function binding(value: unknown, id?: string): Binding {
 }
 // The binding's reason codes, such as pi-extensions-unavailable.
 function reasonCodes(observed: Binding | null): string[] {
-  return (observed?.reasons ?? []).flatMap((reason) =>
-    typeof reason?.code === "string" &&
-    /^[a-z][a-z0-9-]{0,63}$/.test(reason.code)
-      ? [reason.code]
-      : [],
+  return reasonCodeList(
+    (observed?.reasons ?? []).map((reason) => reason?.code),
   );
 }
 // The first reason's upstream message, for display only.
@@ -316,6 +354,7 @@ export async function prepareLocalModels(
     code: string,
     message: string,
     summary?: LocalModelsPlanSummary,
+    bindingReasons: string[] = reasons,
   ): InstallOutcome => ({
     code: 4,
     state: "action_required",
@@ -323,7 +362,7 @@ export async function prepareLocalModels(
     details: {
       code,
       ...(summary ? { localModelsPlan: summary } : {}),
-      ...(reasons.length ? { reasons } : {}),
+      ...(bindingReasons.length ? { reasons: bindingReasons } : {}),
     },
   });
   if (options.localModelsReplan && options.localModelsApproval)
@@ -502,6 +541,8 @@ export async function prepareLocalModels(
         return action(
           "LOCAL_MODELS_RECOVERY_REQUIRED",
           "The local model stack is not ready, and its resource choices changed since its plan was approved. Review a new plan; existing resources were preserved.",
+          undefined,
+          [],
         );
       // Whatever stopped the approved stack (a stopped or adopted
       // deployment, a Pi without extension support from an earlier
@@ -609,7 +650,7 @@ export async function restoreByokSource(
   if (failure)
     options.onEvent({
       kind: "log",
-      message: `${failure.message} (${failure.code}) Agents cannot reach the model until the endpoint is reachable and the BYOK source is applied again on the Models page, or Linger restarts.`,
+      message: `${failure.message} (${failure.code}) The Computer mounts the gateway again before the next Run once the endpoint is reachable.`,
     });
   return failure;
 }

@@ -3,6 +3,10 @@ import { useState } from "react";
 
 import { Icon } from "@/components/ui/icon";
 import { ActorAvatar } from "@/features/rooms/members/actor-avatar";
+import {
+  availabilityLabel,
+  availabilitySummary,
+} from "@/features/rooms/members/agent-availability-text";
 import type { TeamHubTenantAgent } from "@/features/teamhub/teamhub-types";
 import type { Translate } from "@/i18n/language";
 import { useT } from "@/i18n/use-translation";
@@ -166,11 +170,18 @@ function availabilityText(
     availability.localRuntimeStatus?.runtime_type ??
     agent.runtime.placement?.runtime_type;
   const app = runtimeType ? appNames[runtimeType] : undefined;
-  const reason = availability.currentActivity?.summary;
+  const wording = {
+    current_activity: availability.currentActivity,
+    label: availability.label,
+    reason: availability.reason,
+    status: availability.status,
+  };
+  const label = availabilityLabel(wording, t);
+  const reason = availabilitySummary(wording, t);
   if (availability.status === "online") {
     const tasks = availability.activeTaskCount;
     return [
-      availability.label,
+      label,
       app,
       tasks ? t(computersMessages.tasksRunning, { count: tasks }) : null,
     ]
@@ -178,6 +189,6 @@ function availabilityText(
       .join(" · ");
   }
   if (needsSignIn(availability) && app)
-    return `${availability.label} · ${t(computersMessages.appSignInNeeded, { app })}`;
-  return reason ? `${availability.label} · ${reason}` : availability.label;
+    return `${label} · ${t(computersMessages.appSignInNeeded, { app })}`;
+  return reason ? `${label} · ${reason}` : label;
 }

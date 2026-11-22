@@ -1,6 +1,9 @@
 import { useSyncExternalStore } from "react";
 
 import { isDesktopShell } from "@/app/desktop-shell";
+import { translate } from "@/i18n/language";
+import type { Message } from "@/i18n/messages";
+import { voiceWindowMessages } from "./voice-window.messages";
 
 /** Chrome and Edge 116+ only; TypeScript's DOM library does not declare it yet. */
 interface DocumentPictureInPicture {
@@ -44,9 +47,9 @@ const pipSizes = {
 
 // What the desktop shows as the window's name; browsers show the site instead.
 const pipTitles = {
-  "voice-mode": "Voice Mode",
-  recording: "Meeting",
-} satisfies Record<VoicePipOwner, string>;
+  "voice-mode": voiceWindowMessages.title,
+  recording: voiceWindowMessages.meetingTitle,
+} satisfies Record<VoicePipOwner, Message<string>>;
 
 let pip: { owner: VoicePipOwner; window: Window } | undefined;
 const listeners = new Set<() => void>();
@@ -143,7 +146,7 @@ export async function openVoicePip(
     if (!opened) return undefined;
     returning = false;
     returnedByButton = undefined;
-    opened.document.title = pipTitles[owner];
+    opened.document.title = translate(pipTitles[owner]);
     const stopMirroring = mirrorStyles(opened.document);
     opened.addEventListener("pagehide", () => {
       stopMirroring();

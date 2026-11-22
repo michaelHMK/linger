@@ -27,6 +27,7 @@ import { translate } from "@/i18n/language";
 import type { Message } from "@/i18n/messages";
 import { useT } from "@/i18n/use-translation";
 
+import { decisionCardHeading } from "./card-prompts";
 import { CardActions, CardError } from "./approval-card-parts";
 import { CardBox, CardDone, type ReceiptTone } from "./card-shell";
 import { cardsMessages } from "./cards.messages";
@@ -247,7 +248,7 @@ export function ComputerPermissionDecision({
   return (
     <>
       <CardBox
-        heading={card.title}
+        heading={decisionCardHeading(card, t)}
         label={t(cardsMessages.labelSystemPermission)}
       >
         <ul className="flex flex-col">

@@ -31,7 +31,7 @@ beforeEach(() => {
       <p>The release plan is still in review.</p>
       <textarea aria-label="Message Room" data-chat-composer>Unsent draft</textarea>
     </main>
-    <section aria-label="Voice Mode window"><p>Text in the voice window</p></section>`;
+    <section aria-label="Voice Mode window" data-voice-window><p>Text in the voice window</p></section>`;
 });
 afterEach(() => {
   vi.restoreAllMocks();

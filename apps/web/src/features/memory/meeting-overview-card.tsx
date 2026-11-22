@@ -6,6 +6,7 @@ import type { Message } from "@/i18n/messages";
 import { useT } from "@/i18n/use-translation";
 
 import type { MeetingOutcome, MeetingTopic } from "./meeting-overview";
+import { meetingsExtrasMessages } from "./meetings-extras.messages";
 import { meetingsMessages as m } from "./meetings.messages";
 
 /**
@@ -48,7 +49,9 @@ export function MeetingOverviewCard({ topics }: { topics: MeetingTopic[] }) {
       aria-label={t(m.overview)}
       className={cn("@container", sectionFrame)}
     >
-      <h2 className={sectionHeading}>Meeting Summary</h2>
+      <h2 className={sectionHeading}>
+        {t(meetingsExtrasMessages.meetingSummary)}
+      </h2>
       <ol
         aria-label={t(m.topics)}
         className={cn(
@@ -175,7 +178,7 @@ export function MeetingOutcomes({
       <h2 className={sectionHeading}>{title}</h2>
       {outcomes.length === 0 ? (
         <p className="text-[15px] leading-relaxed text-app-body">
-          None observed.
+          {t(meetingsExtrasMessages.noneObserved)}
         </p>
       ) : null}
       <ul className="space-y-2.5 text-[15px] leading-relaxed text-app-body">

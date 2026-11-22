@@ -111,6 +111,7 @@ type RunSpec struct {
 	Effort                string
 	HumanInteraction      *HumanInteractionBridge
 	PermissionReviewer    *permission.Reviewer
+	StopHook              StopHookFunc
 	CodexPermissionHook   *permission.CodexHook
 	RuntimeHome           string
 	SharedTaskLink        permission.CodexTaskLink

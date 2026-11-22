@@ -491,6 +491,7 @@ function downloadStageMessage(
       : `${label}: retrying…`;
   return undefined;
 }
+
 async function runLocalmodelsCommand(
   home: string,
   args: string[],
@@ -609,7 +610,12 @@ async function runLocalmodelsCommand(
   const result = await run(
     tool.python,
     ["-P", "-s", "-m", "localmodels", ...args],
-    { ...options, cwd: tool.moduleDir, env, onOutput },
+    {
+      ...options,
+      cwd: tool.moduleDir,
+      env,
+      onOutput,
+    },
   );
   const seconds = (ms: number) => (ms / 1000).toFixed(1);
   options.onEvent?.({

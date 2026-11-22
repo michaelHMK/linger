@@ -2,8 +2,8 @@ import { defineMessages } from "@/i18n/messages";
 
 /**
  * The web search key field, shared by Connectors and the chat's search key
- * card. Backend names and descriptions TeamHub sends are data and are shown
- * as they arrive.
+ * card. Backend names are brands and stay as TeamHub sends them; their
+ * descriptions are worded in web-search-backend-text.ts.
  */
 export const webSearchMessages = defineMessages("webSearch", {
   apiKey: "{backend} API key",

@@ -120,6 +120,12 @@ export interface LingerDesktopApi {
     // Brings the main window to the front, from the floating window.
     showMainWindow(): Promise<void>;
   };
+  // The page reports the language the person chose in Settings › Language,
+  // and again on every change, so the app's menus, tray, notifications and
+  // own windows follow it. No report means no choice yet.
+  readonly language: {
+    set(language: string): Promise<void>;
+  };
   // macOS only.
   readonly permissions?: {
     act(step: DesktopPermissionStep): Promise<void>;
@@ -147,4 +153,5 @@ export const IPC = {
   connectorOAuthReturn: "connector-oauth.return",
   previewFrameRefused: "preview.frame-refused",
   voiceWindowShowMain: "voice-window.show-main",
+  languageSet: "language.set",
 } as const;

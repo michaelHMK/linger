@@ -11,8 +11,9 @@ type Schemas = components["schemas"];
 /**
  * Every code the Local models page shows, as the message that words it. The
  * page branches on codes only; diagnostic `detail` text from the Computer is
- * never shown. Typing each map by its generated code set makes a new code a
- * type error here until it has copy.
+ * shown only where the contract explicitly exposes it for the owner (BYOK
+ * endpoint refusals and local BYOK gateway failures). Typing each map by its
+ * generated code set makes a new code a type error here until it has copy.
  */
 
 const actionRefusals: Record<
@@ -256,6 +257,7 @@ const modelSourceRefusals: Record<
 > = {
   AGENT_HAS_ACTIVE_RUNS: m.sourceAgentsWorking,
   BYOK_AUTH_FAILED: m.sourceByokAuthFailed,
+  BYOK_GATEWAY_FAILED: m.sourceByokGatewayFailed,
   BYOK_INVALID_CONFIG: m.sourceByokInvalidConfig,
   BYOK_NOT_FOUND: m.sourceByokNotFound,
   BYOK_UNREACHABLE: m.sourceByokUnreachable,
@@ -288,6 +290,32 @@ const byokEndpointRefusals = new Set([
   "BYOK_UNREACHABLE",
   "BYOK_UPSTREAM_REJECTED",
 ]);
+
+/** Structured failure returned by TeamHub's model-source endpoints. */
+export interface ModelSourceFailure {
+  code?: string;
+  details?: readonly { field: string; reason: string }[];
+  message?: string;
+}
+
+/**
+ * Why a model-source switch failed, preserving owner-visible Computer detail
+ * when the contract provides it.
+ */
+export function modelSourceFailureCopy(
+  error: ModelSourceFailure | undefined,
+  t: Translate,
+) {
+  if (error?.code === "BYOK_GATEWAY_FAILED") {
+    const detail = error.details
+      ?.find((entry) => entry.field === "gateway")
+      ?.reason.trim();
+    return detail
+      ? t(m.sourceByokGatewayFailedDetail, { detail })
+      : t(m.sourceByokGatewayFailed);
+  }
+  return byokFailureCopy(error?.code, error?.message ?? "", t);
+}
 
 /** Why a request to a BYOK endpoint (a test or a model listing) failed. */
 export function byokFailureCopy(

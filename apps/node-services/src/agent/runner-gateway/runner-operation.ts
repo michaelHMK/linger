@@ -437,9 +437,12 @@ export class RunnerOperationState {
       runtime: request.runtime,
       session_options: request.session_options,
       session: request.session,
-      // The Daemon prepares the same MCP config the reviewed Run will use.
+      // The Daemon prepares the same hooks and MCP config the Run will use.
       ...(request.run_context.permission_review === true
         ? { permission_review: true as const }
+        : {}),
+      ...(request.run_context.stop_hook === true
+        ? { stop_hook: true as const }
         : {}),
       mcp_relays: request.run_resources.mcp_servers,
     });

@@ -506,6 +506,7 @@ export async function startInstallerServer(options: ServerOptions) {
                   "provider",
                   "baseUrl",
                   "model",
+                  "method",
                 ].includes(key),
             )
           )
@@ -517,8 +518,17 @@ export async function startInstallerServer(options: ServerOptions) {
             provider?: unknown;
             baseUrl?: unknown;
             model?: unknown;
+            method?: unknown;
           };
           const name = instanceName(data.instance);
+          if (
+            data.method !== undefined &&
+            (method !== "POST" ||
+              data.code !== undefined ||
+              data.apiKey !== undefined ||
+              (data.method !== "browser" && data.method !== "device"))
+          )
+            throw new Error("Invalid runtime login method");
           if (
             data.code !== undefined &&
             (typeof data.code !== "string" ||
@@ -574,6 +584,7 @@ export async function startInstallerServer(options: ServerOptions) {
                       : {}),
                   }
                 : undefined,
+              data.method as "browser" | "device" | undefined,
             ),
           );
           return;

@@ -16,12 +16,14 @@ import type { DiagnosticsModule } from "./diagnostics.js";
 import { diagnosticsDialogs } from "./diagnostics-dialogs.js";
 import { sendWithPrompts } from "./diagnostics-upload.js";
 import { EnrollmentError, type EnrollmentModule } from "./enrollment.js";
+import type { LanguageModule } from "./language.js";
 import type { Module, ModuleContext } from "./modules.js";
 import type { PowerGuardModule } from "./power-guard.js";
 import type { SetupWindowModule } from "./setup-window.js";
 import type { StatusModule, StatusTone } from "./status.js";
 import { renderTrayIcon, type TrayArtwork } from "./tray-icon.js";
 import { trayMenu, type TrayAction, type TrayMenuItem } from "./tray-menu.js";
+import { trayMessages } from "./tray.messages.js";
 import type { UpdaterModule } from "./updater.js";
 import type { WindowManagerModule } from "./window-manager.js";
 
@@ -71,6 +73,7 @@ export class TrayModule implements Module {
     "SetupWindow",
     "Updater",
     "Diagnostics",
+    "Language",
   ];
   readonly #options: TrayOptions;
   #ctx: ModuleContext | undefined;
@@ -101,6 +104,7 @@ export class TrayModule implements Module {
       ctx.bus.on("status.changed", () => this.#refresh()),
       ctx.bus.on("power.changed", () => this.#refresh()),
       ctx.bus.on("update.changed", () => this.#refresh()),
+      ctx.bus.on("language.changed", () => this.#refresh()),
     );
     this.#refresh();
   }
@@ -130,8 +134,14 @@ export class TrayModule implements Module {
     }
     if (!this.#tray) return;
     this.#tray.setImage(this.#icon());
-    this.#tray.setToolTip(`Linger · ${this.#status().label}`);
+    this.#tray.setToolTip(
+      this.#t(trayMessages.tooltip, { status: this.#status().label }),
+    );
     this.#tray.setContextMenu(this.#menu());
+  }
+
+  get #t() {
+    return this.#ctx!.get<LanguageModule>("Language").t;
   }
 
   #icon(): NativeImage {
@@ -149,14 +159,17 @@ export class TrayModule implements Module {
     const power = this.#ctx!.get<PowerGuardModule>("PowerGuard");
     const status = this.#status();
     const update = this.#ctx!.get<UpdaterModule>("Updater").state();
-    const items = trayMenu({
-      status,
-      preventSleep: power.alwaysOn(),
-      enrolled: !!this.#ctx!.config.get().computerId,
-      update,
-      canSendDiagnostics:
-        !!this.#ctx!.get<DiagnosticsModule>("Diagnostics").uploadUrl(),
-    });
+    const items = trayMenu(
+      {
+        status,
+        preventSleep: power.alwaysOn(),
+        enrolled: !!this.#ctx!.config.get().computerId,
+        update,
+        canSendDiagnostics:
+          !!this.#ctx!.get<DiagnosticsModule>("Diagnostics").uploadUrl(),
+      },
+      this.#t,
+    );
     return Menu.buildFromTemplate(items.map((item) => this.#item(item)));
   }
 
@@ -207,8 +220,9 @@ export class TrayModule implements Module {
       case "send-diagnostics":
         void sendWithPrompts(
           ctx.get<DiagnosticsModule>("Diagnostics").sender,
-          diagnosticsDialogs(() =>
-            ctx.get<WindowManagerModule>("WindowManager").window(),
+          diagnosticsDialogs(
+            () => ctx.get<WindowManagerModule>("WindowManager").window(),
+            this.#t,
           ),
         );
         break;
@@ -231,9 +245,11 @@ export class TrayModule implements Module {
       const window = windows.window();
       const options = {
         type: "warning" as const,
-        message: signedOut ? "Sign in first" : "Couldn't connect this computer",
+        message: signedOut
+          ? this.#t(trayMessages.signInFirst)
+          : this.#t(trayMessages.enrollFailed),
         detail: signedOut
-          ? "Sign in to Linger in the window, then choose Connect This Computer again."
+          ? this.#t(trayMessages.signInFirstDetail)
           : error instanceof Error
             ? error.message
             : String(error),

@@ -4,6 +4,8 @@
  * register what they offer while they are mounted; nothing else is reachable.
  */
 
+import { voiceWindowSelector } from "./voice-window-selector";
+
 export interface VoiceSearchResult {
   id: string;
   name: string;
@@ -358,7 +360,7 @@ export function collectVoiceElements(
     .filter(
       (element) =>
         element.getClientRects().length > 0 &&
-        !element.closest('[aria-label="Voice Mode window"]'),
+        !element.closest(voiceWindowSelector),
     )
     .at(-1);
   for (const element of (dialog ?? document).querySelectorAll<HTMLElement>(
@@ -366,7 +368,7 @@ export function collectVoiceElements(
   )) {
     if (
       element.closest(
-        '[aria-label="Voice Mode window"], [aria-hidden="true"], [inert]',
+        `${voiceWindowSelector}, [aria-hidden="true"], [inert]`,
       ) ||
       element.matches(":disabled, [aria-disabled='true']")
     )
@@ -514,7 +516,7 @@ export function voiceTextFields(): VoiceTextField[] {
     .filter(
       (element) =>
         element.getClientRects().length > 0 &&
-        !element.closest('[aria-label="Voice Mode window"]'),
+        !element.closest(voiceWindowSelector),
     )
     .at(-1);
   const fields: VoiceTextField[] = [];
@@ -523,7 +525,7 @@ export function voiceTextFields(): VoiceTextField[] {
   >(textField)) {
     if (
       element.closest(
-        '[aria-label="Voice Mode window"], [aria-hidden="true"], [inert]',
+        `${voiceWindowSelector}, [aria-hidden="true"], [inert]`,
       ) ||
       element.disabled ||
       element.readOnly ||
@@ -647,7 +649,7 @@ function scroller(
   element: HTMLElement,
   horizontal: boolean,
 ): Scroller | undefined {
-  if (element.closest('[aria-label="Voice Mode window"]')) return undefined;
+  if (element.closest(voiceWindowSelector)) return undefined;
   const rect = element.getBoundingClientRect();
   if (!onScreen(rect)) return undefined;
   const area = rect.width * rect.height;
@@ -771,7 +773,7 @@ function findScroller(horizontal: boolean, regionId?: string) {
       window.innerWidth * 0.6,
       window.innerHeight * 0.5,
     ) ?? []
-  ).filter((element) => !element.closest('[aria-label="Voice Mode window"]'));
+  ).filter((element) => !element.closest(voiceWindowSelector));
   for (const point of points) {
     const inner = candidates
       .filter((item) => item.element !== page && item.element.contains(point))
@@ -843,7 +845,7 @@ function openOverlays() {
     document.querySelectorAll<HTMLElement>(regionSelector),
   ).filter(
     (overlay) =>
-      !overlay.closest('[aria-label="Voice Mode window"]') &&
+      !overlay.closest(voiceWindowSelector) &&
       onScreen(overlay.getBoundingClientRect()) &&
       // A docked side panel marks itself closable; it neither floats nor is a dialog.
       (isInDialog(overlay) ||

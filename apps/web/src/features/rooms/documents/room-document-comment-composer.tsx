@@ -3,6 +3,7 @@ import { useBlockNoteEditor, useExtension } from "@blocknote/react";
 import { useEffect, useRef } from "react";
 
 import type { TeamHubActorRef } from "@/features/teamhub/teamhub-types";
+import { useT } from "@/i18n/use-translation";
 import {
   MessageComposer,
   type MessageComposition,
@@ -10,6 +11,7 @@ import {
 } from "../chat/message-composer";
 
 import { commentBodyFromComposition } from "./room-document-comment-body";
+import { documentCommentsMessages as m } from "./document-comments.messages";
 
 interface DocumentMentionComposerProps {
   ariaLabel?: string;
@@ -48,7 +50,7 @@ export function RoomDocumentCommentComposer(
 }
 
 export function DocumentMentionMessageComposer({
-  ariaLabel = "New Document comment",
+  ariaLabel,
   autoFocus = false,
   initialMentions,
   initialValue,
@@ -58,12 +60,13 @@ export function DocumentMentionMessageComposer({
   onCancel,
   onSubmit,
   onSubmitted,
-  placeholder = "Add a comment",
+  placeholder,
   submitLabel,
 }: DocumentMentionComposerProps & {
   onSubmit: (composition: MessageComposition) => Promise<void>;
   onSubmitted?: () => void;
 }) {
+  const t = useT();
   const composerRef = useRef<MessageComposerHandle>(null);
   useEffect(() => {
     // Native autofocus runs before the anchored card is positioned and can
@@ -77,7 +80,7 @@ export function DocumentMentionMessageComposer({
       className="room-document-comment-composer"
     >
       <MessageComposer
-        ariaLabel={ariaLabel}
+        ariaLabel={ariaLabel ?? t(m.newComment)}
         ref={composerRef}
         documentMentionsEnabled={false}
         initialMentions={initialMentions}
@@ -89,11 +92,11 @@ export function DocumentMentionMessageComposer({
           await onSubmit(composition);
           onSubmitted?.();
         }}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t(m.addCommentPlaceholderShort)}
       />
       {mentionDirectoryError ? (
         <p className="mt-2 text-xs text-app-danger" role="alert">
-          Mention directory is unavailable.
+          {t(m.mentionDirectoryUnavailable)}
         </p>
       ) : null}
     </div>

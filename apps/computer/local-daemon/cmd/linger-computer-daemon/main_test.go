@@ -234,6 +234,20 @@ func TestProviderInstallationsKeepDiscoveredContextWindows(t *testing.T) {
 	if windows := installations["codex"].ContextWindows; len(windows) != 1 || windows["local"] != 64896 {
 		t.Fatalf("context windows = %v", windows)
 	}
+	if installations["codex"].DefaultModel != "" {
+		t.Fatalf("default model = %q from a catalog that marks none", installations["codex"].DefaultModel)
+	}
+}
+
+func TestProviderInstallationsKeepTheCatalogDefaultModel(t *testing.T) {
+	discovered := provider.DiscoveryResult{Installations: map[string]provider.RuntimeDiagnostic{"codex": {
+		Type: "codex", ExecutablePath: "/bin/codex",
+		Models: []provider.RuntimeModel{{ID: "gpt-other"}, {ID: "gpt-account-default", IsDefault: true}},
+	}}}
+	installations, _ := providerInstallations(discovered, nil, "")
+	if model := installations["codex"].DefaultModel; model != "gpt-account-default" {
+		t.Fatalf("default model = %q", model)
+	}
 }
 
 func TestProviderInstallationsMarkTheAPILink(t *testing.T) {

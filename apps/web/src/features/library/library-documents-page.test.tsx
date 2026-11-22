@@ -644,6 +644,23 @@ describe("Library Documents", () => {
     expect(within(files).getByText("No linked context")).toBeVisible();
   });
 
+  it("lists the Personal Wiki once beside the Rooms a Document is visible in", async () => {
+    const runtime = await signedInRuntime();
+    const linked = seedNativeDocument(runtime, "wiki-row");
+    linked.title = "Wiki plan";
+    linked.from = [
+      { binding_kind: "room", context_id: "room-all", label: "Planning" },
+      { binding_kind: "wiki_page", context_id: "wiki-1" },
+      { binding_kind: "wiki_source", context_id: "wiki-1", label: "Wiki" },
+    ];
+    renderPage(runtime);
+
+    const files = await screen.findByLabelText("My pages documents");
+    expect(
+      await within(files).findByText("Visible in Planning, Personal Wiki"),
+    ).toBeVisible();
+  });
+
   it("renders Workspace file rows with owner, time, download, and more actions", async () => {
     const runtime = await signedInRuntime();
     const seeded = seedNativeDocument(runtime, "workspace-file-row");

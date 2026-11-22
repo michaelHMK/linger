@@ -182,21 +182,26 @@ describe("local repository gate", { timeout: 60_000 }, () => {
     expect(kana.status).toBe(0);
   });
 
-  it("allows CJK ideographs only in the client's translation catalogs", () => {
+  it("allows CJK ideographs only in the translation catalogs", () => {
     const changedContent = '{ "greeting": "\u4f60\u597d" }\n';
-    const catalog = runGate({
-      changedPath: "apps/web/src/i18n/locales/zh-CN.json",
-      changedContent,
-    });
-    expect(catalog.status).toBe(0);
-    expect(catalog.commands).toContain(
-      "pnpm exec prettier --check apps/web/src/i18n/locales/zh-CN.json",
-    );
+    for (const changedPath of [
+      "apps/web/src/i18n/locales/zh-CN.json",
+      "apps/desktop/src/i18n/locales/zh-CN.json",
+    ]) {
+      const catalog = runGate({ changedPath, changedContent });
+      expect(catalog.status).toBe(0);
+      expect(catalog.commands).toContain(
+        `pnpm exec prettier --check ${changedPath}`,
+      );
+    }
 
     for (const changedPath of [
       "apps/web/src/i18n/zh-CN.json",
       "apps/web/src/i18n/locales.json",
-      "apps/desktop/src/i18n/locales/zh-CN.json",
+      "apps/desktop/src/i18n/zh-CN.json",
+      "apps/desktop/src/i18n/locales.json",
+      "apps/desktop/src/shell/setup.html",
+      "apps/desktop/locales/zh-CN.json",
     ]) {
       const elsewhere = runGate({ changedPath, changedContent });
       expect(elsewhere.status).not.toBe(0);

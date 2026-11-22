@@ -5,6 +5,9 @@ import {
   type RefObject,
 } from "react";
 
+import { useT } from "@/i18n/use-translation";
+import { voiceWindowMessages as m } from "./voice-window.messages";
+
 /** A voice window inside the page, in viewport pixels. */
 export interface VoiceWindowRect {
   height: number;
@@ -185,6 +188,7 @@ export function VoiceWindowResizeHandles({
   /** The window as it is on screen now. */
   rect: () => VoiceWindowRect | undefined;
 }) {
+  const t = useT();
   const drag = useRef<{
     bounds: VoiceWindowBounds;
     edge: VoiceWindowEdge;
@@ -257,7 +261,7 @@ export function VoiceWindowResizeHandles({
               );
               onResizeEnd?.();
             }}
-            title="Drag to resize, or use the arrow keys"
+            title={t(m.resizeHint)}
             type="button"
             {...handlers(edge)}
           >

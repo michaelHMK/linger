@@ -147,6 +147,6 @@ it("shows the actionable failure reason when the latest Wiki refresh failed", as
     </QueryClientProvider>,
   );
   expect(await screen.findByRole("alert")).toHaveTextContent(
-    "Wiki update failed — Runtime incompatible. Update your local CLI or Linger.",
+    "Wiki update failed — Runtime incompatible, or its model isn't available to your account. Update your local CLI or Linger, or check its model setting.",
   );
 });

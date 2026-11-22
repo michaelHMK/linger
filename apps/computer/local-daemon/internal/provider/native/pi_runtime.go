@@ -146,6 +146,7 @@ func (p *piRuntime) reuse(ctx context.Context, proc *piProcess, plan piLaunchPla
 	turn := newPiTurn(runCtx, cancel, proc, true, plan.fence, p.profile.Logger)
 	turn.readiness = plan.spec.Readiness
 	turn.reviewer, turn.dir = plan.spec.PermissionReviewer, plan.spec.Dir
+	turn.stopHook = plan.spec.StopHook
 	if err := proc.bind(turn); err != nil {
 		return fail(err)
 	}
@@ -243,6 +244,7 @@ func (p *piRuntime) spawn(ctx context.Context, plan piLaunchPlan, lock *os.File)
 	turn := newPiTurn(runCtx, cancel, proc, false, plan.fence, p.profile.Logger)
 	turn.readiness = plan.spec.Readiness
 	turn.reviewer, turn.dir = spec.PermissionReviewer, spec.Dir
+	turn.stopHook = plan.spec.StopHook
 	spec.Readiness.spawned()
 	spec.Readiness.session(spec.ResumeID != "")
 	_ = proc.bind(turn)

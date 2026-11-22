@@ -22,9 +22,12 @@ import { documentLogicalTitle } from "@/features/library/document-display-name";
 import { useWikiDocumentLinks } from "@/features/wiki/wiki-document-links";
 import type { TeamHubClient } from "@/features/teamhub/teamhub-client";
 import type { TeamHubDocument } from "@/features/teamhub/teamhub-types";
+import { libraryMessages } from "@/features/library/library.messages";
+import { useT } from "@/i18n/use-translation";
 
 import { DocumentVersionSelectionCommentControl } from "./document-version-selection-comment-control";
 import { DocumentShareDialog } from "./document-share-dialog";
+import { documentPageMessages as m } from "./document-page.messages";
 import { UnifiedDocumentBody } from "./unified-document-body";
 import { UnifiedDocumentPageHeader } from "./unified-document-header";
 import {
@@ -280,6 +283,7 @@ function UnifiedDocumentPageDialogs({
   trashError: string | null;
   trashPending: boolean;
 }) {
+  const t = useT();
   return (
     <>
       {historyOpen ? (
@@ -290,7 +294,7 @@ function UnifiedDocumentPageDialogs({
               role="status"
             >
               <Spinner size={16} />
-              Loading history…
+              {t(libraryMessages.loadingHistory)}
             </div>
           }
         >
@@ -345,6 +349,7 @@ function UnifiedDocumentCommentsSurface({
   rootRef: MutableRefObject<HTMLDivElement | null>;
   tenantId: string;
 }) {
+  const t = useT();
   const [versionSelection, setVersionSelection] = useState<string | null>(null);
   const [commentsMounted, setCommentsMounted] = useState(false);
   useEffect(() => {
@@ -389,7 +394,7 @@ function UnifiedDocumentCommentsSurface({
         {commentsOpen ? (
           <div
             {...commentsWidth.handleProps}
-            aria-label="Resize Document comments"
+            aria-label={t(m.resizeComments)}
             className={`${commentsWidth.handleProps.className} document-comments-resize-handle`}
           />
         ) : null}

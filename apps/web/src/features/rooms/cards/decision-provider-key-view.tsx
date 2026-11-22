@@ -19,6 +19,7 @@ import { translate } from "@/i18n/language";
 import type { Message } from "@/i18n/messages";
 import { useT } from "@/i18n/use-translation";
 
+import { decisionCardHeading } from "./card-prompts";
 import { CardActions, CardError, CardRow } from "./approval-card-parts";
 import { CardBox, CardDone, type ReceiptTone } from "./card-shell";
 import { cardsMessages } from "./cards.messages";
@@ -51,6 +52,9 @@ export function ProviderKeyDecision({
   const [error, setError] = useState("");
   const owner = currentActorId === card.decision_owner.id;
   const appKey = card.provider_key?.app_key;
+  const appName = appKey
+    ? catalog.data?.apps.find((app) => app.key === appKey)?.display_name
+    : undefined;
 
   async function decline() {
     setBusy(true);
@@ -76,7 +80,10 @@ export function ProviderKeyDecision({
   const result = card.status === "pending" ? null : keyResult(card);
   return (
     <>
-      <CardBox heading={card.title} label={t(cardsMessages.labelComposioKey)}>
+      <CardBox
+        heading={decisionCardHeading(card, t, { app: appName })}
+        label={t(cardsMessages.labelComposioKey)}
+      >
         <CardRow
           detail={
             appKey

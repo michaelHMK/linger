@@ -43,6 +43,7 @@ import { createTenantAgent } from "../members/create-tenant-agent";
 import { useAgentPlacementFlow } from "../members/use-agent-placement-flow";
 
 import { templateResourceChips } from "./agent-template";
+import { templateDescription, templateName } from "./builtin-template-text";
 import { agentTemplateMessages as m } from "./agent-templates.messages";
 import {
   TemplateContents,
@@ -218,13 +219,13 @@ function TemplatePicker({
                             <ActorAvatar
                               avatarKey={template.avatar_key}
                               kind="agent"
-                              name={template.name}
+                              name={templateName(template, t)}
                               size="md"
                             />
                             <span className="min-w-0 flex-1">
                               <span className="flex min-w-0 items-baseline gap-1.5 pr-7">
                                 <span className="truncate text-sm font-semibold text-app-ink">
-                                  {template.name}
+                                  {templateName(template, t)}
                                 </span>
                                 {template.published_by ? (
                                   <span className="shrink-0 truncate text-xs leading-4 text-muted-foreground">
@@ -407,9 +408,9 @@ function TemplateSetup({
   template: TeamHubAgentTemplate;
   tenantId: string;
 }) {
-  const [name, setName] = useState(template.name);
-  const { client } = useTeamHubRuntime();
   const t = useT();
+  const [name, setName] = useState(() => templateName(template, t));
+  const { client } = useTeamHubRuntime();
   const placement = useAgentPlacementFlow({ tenantId });
   const modelSelection = useAgentModelSelection(
     placement.selection.runtimeModels,
@@ -468,7 +469,7 @@ function TemplateSetup({
       }
       const input = {
         agentType: "general" as const,
-        description: template.description,
+        description: templateDescription(template, t),
         instructions: template.instructions,
         model: modelSelection.model,
         ...(modelSelection.reasoningEffort
@@ -551,13 +552,13 @@ function TemplateSetup({
           <ActorAvatar
             avatarKey={template.avatar_key}
             kind="agent"
-            name={template.name}
+            name={templateName(template, t)}
             size="sm"
           />
           <div className="min-w-0">
-            <h2 className="truncate text-lg">{template.name}</h2>
+            <h2 className="truncate text-lg">{templateName(template, t)}</h2>
             <p className="mt-1 text-sm text-app-muted">
-              {template.description || t(m.chooseWhere)}
+              {templateDescription(template, t) || t(m.chooseWhere)}
             </p>
           </div>
         </div>

@@ -9,6 +9,7 @@ import { runtimeStatusLabels } from "@/features/local-computer/computer-readines
 import { localComputersQueryKey } from "@/features/local-computer/local-computer-queries";
 import { LocalRuntimeAuthenticationGuidance } from "@/features/local-computer/local-runtime-authentication-guidance";
 import { LocalRuntimeInstallGuidance } from "@/features/local-computer/local-runtime-install-guidance";
+import { localRuntimeMessage } from "@/features/local-computer/local-runtime-message";
 import { localModelsQueryOptions } from "@/features/local-models/local-models-queries";
 import type { TeamHubClient } from "@/features/teamhub/teamhub-client";
 import type {
@@ -363,8 +364,9 @@ function RuntimeSetupGuidance({
       </div>
     );
   return (
-    <p className="text-sm text-app-danger" role="alert">
-      {runtime.message ?? t(agentRuntimeMessages.installAndSignIn)}
+    <p className="text-sm text-app-danger" role="alert" title={runtime.message}>
+      {localRuntimeMessage(runtime, runtime.type, computer.display_name, t) ??
+        t(agentRuntimeMessages.installAndSignIn)}
     </p>
   );
 }

@@ -40,6 +40,7 @@ import type {
   TeamHubMessageAttachmentUpload,
 } from "@/features/teamhub/teamhub-types";
 
+import { decisionCardHeading } from "./card-prompts";
 import { CardActions, CardError } from "./approval-card-parts";
 import { CardBox, CardDone } from "./card-shell";
 import { cardsMessages } from "./cards.messages";
@@ -94,7 +95,7 @@ function SetupCard({
   return (
     <>
       <CardBox
-        heading={card.title}
+        heading={decisionCardHeading(card, t)}
         label={t(cardsMessages.labelAnotherMeSetup)}
       >
         {children}

@@ -14,7 +14,10 @@ import { computersMessages } from "./computers.messages";
 export interface AgentAvailability {
   readonly available: boolean;
   readonly activeTaskCount: number;
+  /** TeamHub's English label, the fallback when `reason` is unknown. */
   readonly label: string;
+  /** Why the Agent has its status, worded on the client. */
+  readonly reason?: TeamHubTenantAgentAvailabilitySnapshot["availability"]["reason"];
   readonly status: TeamHubTenantAgentAvailabilitySnapshot["availability"]["status"];
   readonly currentActivity?: TeamHubTenantAgentAvailabilitySnapshot["availability"]["current_activity"];
   /** Which AI app and Computer state TeamHub derived the availability from. */
@@ -45,6 +48,7 @@ export function projectAgentAvailabilitySnapshots(
       currentActivity: snapshot.availability.current_activity,
       label: snapshot.availability.label,
       localRuntimeStatus: snapshot.local_runtime_status,
+      reason: snapshot.availability.reason,
       status: snapshot.availability.status,
     });
   }

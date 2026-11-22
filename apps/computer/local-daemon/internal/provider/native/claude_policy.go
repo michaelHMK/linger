@@ -55,6 +55,8 @@ const (
 	// claudeSteerHookID answers the main agent's tool results, which carry
 	// steered input.
 	claudeSteerHookID = "hook_steer"
+	// claudeStopHookID answers Claude's Stop hook before a turn ends.
+	claudeStopHookID = "hook_stop"
 )
 
 // authorizedTools is the built-in list followed by qualifying MCP tools in
@@ -237,6 +239,7 @@ func claudeInitializeFrame(spec RunSpec) []byte {
 				"PreToolUse":         []any{map[string]any{"hookCallbackIds": []string{claudeHookCallbackID}}},
 				"PostToolUse":        []any{map[string]any{"hookCallbackIds": []string{claudeSteerHookID}}},
 				"PostToolUseFailure": []any{map[string]any{"hookCallbackIds": []string{claudeSteerHookID}}},
+				"Stop":               []any{map[string]any{"hookCallbackIds": []string{claudeStopHookID}}},
 			},
 			"appendSystemPrompt":   spec.AppendPrompt,
 			"systemPromptSnapshot": false,
@@ -282,10 +285,11 @@ type claudeControlRequest struct {
 }
 
 type claudeHookInput struct {
-	HookEventName string          `json:"hook_event_name"`
-	ToolName      string          `json:"tool_name"`
-	ToolInput     json.RawMessage `json:"tool_input"`
-	AgentID       string          `json:"agent_id"`
+	HookEventName  string          `json:"hook_event_name"`
+	ToolName       string          `json:"tool_name"`
+	ToolInput      json.RawMessage `json:"tool_input"`
+	AgentID        string          `json:"agent_id"`
+	StopHookActive bool            `json:"stop_hook_active"`
 }
 
 // claudeObject decodes a JSON object; null, absent and non-objects fail.
